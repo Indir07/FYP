@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+backend/.venv/
+
+# Node / frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/coverage/
+
+# ML artifacts / datasets
+backend/_datasets/
+backend/_model_registry/
+
+# Local dev env / secrets
+.env
+.env.*
+**/.env
+**/.env.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Generated doc extraction artifacts
+_extracted_*.txt
+
+# Logs
+*.log
+
