@@ -1,0 +1,50 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - CRYPTOVOLT_MODEL_DIR=/data/model_registry
+      - CRYPTOVOLT_DATA_DIR=/data/datasets
+      # Optional: set this via an .env file on the user PC.
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
+    volumes:
+      - ./backend/_model_registry:/data/model_registry
+      - ./backend/_datasets:/data/datasets
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  trainer:
+    build:
+      context: .
+      dockerfile: trainer/Dockerfile
+    depends_on:
+      - backend
+    environment:
+      - API_BASE_URL=http://backend:8000
+      - RUN_TRAINING_ON_START=${RUN_TRAINING_ON_START:-0}
+      - TRAIN_INTERVAL_SECONDS=${TRAIN_INTERVAL_SECONDS:-86400}
+      - POLL_SECONDS=${POLL_SECONDS:-10}
+      - USE_ACTIVATION=${USE_ACTIVATION:-1}
+      - TRAIN_REQUEST_UNIVERSE=${TRAIN_REQUEST_UNIVERSE:-recommended}
+      - TRAIN_REQUEST_LIMIT=${TRAIN_REQUEST_LIMIT:-10}
+      - TRAIN_REQUEST_MAX_PRICE=${TRAIN_REQUEST_MAX_PRICE:-0.5}
+      - TRAIN_REQUEST_MIN_CHANGE_24H=${TRAIN_REQUEST_MIN_CHANGE_24H:-3.0}
+      - TRAIN_REQUEST_MIN_QUOTE_VOLUME_24H=${TRAIN_REQUEST_MIN_QUOTE_VOLUME_24H:-5000000}
+      - TRAIN_REQUEST_INTERVAL=${TRAIN_REQUEST_INTERVAL:-1m}
+      - TRAIN_REQUEST_LIMIT_PER_SYMBOL=${TRAIN_REQUEST_LIMIT_PER_SYMBOL:-750}
+      - TRAIN_REQUEST_TUNE=${TRAIN_REQUEST_TUNE:-0}
+      - TRAIN_REQUEST_TUNE_TRIALS=${TRAIN_REQUEST_TUNE_TRIALS:-8}
+    restart: unless-stopped
+
