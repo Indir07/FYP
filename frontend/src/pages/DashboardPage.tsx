@@ -113,8 +113,22 @@ export function DashboardPage() {
     return Boolean(j.automation)
   }
 
-  async function startAutomation(): Promise<void> {
-    const res = await fetch('http://localhost:8000/api/trading/automation/start', { method: 'POST' })
+  async function startAutomation(sym: string): Promise<void> {
+    const res = await fetch('http://localhost:8000/api/trading/automation/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: sym,
+        interval: '1m',
+        limit: 200,
+        qty: 1,
+        rules_weight: 0.45,
+        ml_weight: 0.55,
+        veto_threshold: -0.35,
+        tick_seconds: 30,
+        sentiment_lookback_minutes: 60,
+      }),
+    })
     if (!res.ok) throw new Error('Failed to start automation')
     setAutomationOn(true)
   }
@@ -198,17 +212,7 @@ export function DashboardPage() {
         const dec = await fetchDecision(symbol, sent.compound_avg)
         setDecision(dec)
 
-        if (!dec.vetoed && (dec.action === 'BUY' || dec.action === 'SELL')) {
-          await fetch('http://localhost:8000/api/paper/submit', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              symbol,
-              side: dec.action,
-              qty: 1,
-            }),
-          })
-        }
+        // Trade execution happens in the backend automation loop now.
       } catch (e) {
         console.error(e)
       } finally {
@@ -262,7 +266,7 @@ export function DashboardPage() {
           {!automationOn ? (
             <button
               className="cv-btn cv-btnPrimary"
-              onClick={() => void startAutomation()}
+              onClick={() => symbol && void startAutomation(symbol)}
               disabled={!symbol}
             >
               Start automation

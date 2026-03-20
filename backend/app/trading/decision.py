@@ -51,10 +51,38 @@ def decide(
     if len(feats) < 50:
         return Decision(action="HOLD", confidence=0.0, vetoed=False, reason="insufficient_data")
 
+    # Live inference uses only OHLCV, but the trained model expects sentiment feature columns.
+    # For the prototype we inject sentiment-derived defaults so FEATURE_COLS is always present.
+    if "sent_mean" not in feats.columns:
+        feats["sent_mean"] = float(sentiment_index)
+    if "sent_count" not in feats.columns:
+        feats["sent_count"] = 1.0 if float(sentiment_index) != 0.0 else 0.0
+    if "sent_pos_share" not in feats.columns:
+        feats["sent_pos_share"] = 1.0 if float(sentiment_index) > 0 else 0.0
+    if "sent_neg_share" not in feats.columns:
+        feats["sent_neg_share"] = 1.0 if float(sentiment_index) < 0 else 0.0
+
     rule_score = _rule_signal(feats)  # [-1, 1]
 
     model = joblib.load(model_path)
-    X = feats[FEATURE_COLS].astype("float32").iloc[[-1]]
+
+    # Be robust to feature-set drift across model training runs.
+    # Older models may have been trained without sentiment columns.
+    expected_cols = getattr(model, "feature_names_in_", None)
+    if expected_cols is None:
+        try:
+            expected_cols = model.get_booster().feature_names
+        except Exception:
+            expected_cols = None
+    if expected_cols is None:
+        expected_cols_list = FEATURE_COLS
+    else:
+        # `expected_cols` can be a numpy array; don't use truthiness on it.
+        expected_cols_list = list(expected_cols)
+        if len(expected_cols_list) == 0:
+            expected_cols_list = FEATURE_COLS
+
+    X = feats[expected_cols_list].astype("float32").iloc[[-1]]
     proba_up = float(model.predict_proba(X)[0][1])
 
     # Map ML proba to [-1, 1]

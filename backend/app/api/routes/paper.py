@@ -7,11 +7,10 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.services.binance_market import KlineQuery, fetch_klines
-from app.trading.paper import PaperBroker
+from app.trading.paper_broker_instance import broker as _broker
 from app.services.alerts_service import record_alert
 
 router = APIRouter()
-_broker = PaperBroker()
 
 
 class SubmitRequest(BaseModel):

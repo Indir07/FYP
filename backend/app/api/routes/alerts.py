@@ -27,7 +27,14 @@ class TestRequest(BaseModel):
 
 @router.post("/test", response_model=TestResponse)
 async def test_alert(req: TestRequest, bg: BackgroundTasks):
-    alert = record_alert(alert_type="SYSTEM", message=req.message, meta={"title": req.title})
+    # Avoid double Discord sends: `record_alert()` can also dispatch webhooks,
+    # and this endpoint already uses FastAPI BackgroundTasks for the actual send.
+    alert = record_alert(
+        alert_type="SYSTEM",
+        message=req.message,
+        meta={"title": req.title},
+        send_to_discord=False,
+    )
     if req.send_to_discord:
         bg.add_task(_send_discord, req.message, title=req.title)
     return TestResponse(ok=True, alert=alert)

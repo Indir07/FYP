@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -48,6 +49,7 @@ def record_alert(
     alert_type: str,
     message: str,
     meta: dict[str, Any] | None = None,
+    send_to_discord: bool = True,
 ) -> dict[str, Any]:
     alert = {
         "id": f"al_{uuid.uuid4().hex[:12]}",
@@ -61,14 +63,24 @@ def record_alert(
         del _recent_alerts[: len(_recent_alerts) - _MAX_RECENT]
 
     # If a Discord webhook is configured, send asynchronously.
+    # This function may be called from both async and sync FastAPI endpoints.
+    # - In async context: create_task on the running loop.
+    # - In sync context: spin a daemon thread and run an event loop there.
     url = _discord_webhook_url()
-    if url:
+    if send_to_discord and url:
+        title = meta.get("title") if meta else None
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(_send_discord(message, title=meta.get("title") if meta else None))
+            loop.create_task(_send_discord(message, title=title))
         except RuntimeError:
-            # Not in an async loop; skip sending (prototype safeguard).
-            pass
+            def _runner() -> None:
+                try:
+                    asyncio.run(_send_discord(message, title=title))
+                except Exception:
+                    # Best-effort: never block alert recording.
+                    return
+
+            threading.Thread(target=_runner, daemon=True).start()
     return alert
 
 
