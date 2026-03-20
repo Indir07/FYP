@@ -61,6 +61,12 @@ def list_entries() -> list[ModelEntry]:
     for p in sorted(MODEL_DIR.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
         with open(p, "r", encoding="utf-8") as f:
             d = json.load(f)
+        # `artifact_path` is persisted in JSON for convenience, but it can become stale
+        # when the app is deployed in Docker (Windows absolute paths won't exist
+        # inside the container). Re-anchor the artifact path to the current MODEL_DIR.
+        model_id = d.get("id")
+        if model_id:
+            d["artifact_path"] = str(MODEL_DIR / f"{model_id}.joblib")
         out.append(ModelEntry(**d))
     return out
 
