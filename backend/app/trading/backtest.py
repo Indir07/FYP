@@ -88,6 +88,21 @@ def backtest_xgb_long_only(
 
     model = joblib.load(model_path)
 
+    # Match model's expected feature columns (sentiment columns may not exist
+    # in older training runs).
+    expected_cols = getattr(model, "feature_names_in_", None)
+    if expected_cols is None:
+        try:
+            expected_cols = model.get_booster().feature_names
+        except Exception:
+            expected_cols = None
+    if expected_cols is None:
+        expected_cols_list = FEATURE_COLS
+    else:
+        expected_cols_list = list(expected_cols)
+        if len(expected_cols_list) == 0:
+            expected_cols_list = FEATURE_COLS
+
     # Keep enough lookback for indicators.
     start_i = max(60, len(df) // 5)
     equity = np.zeros(len(df), dtype=float)
@@ -113,16 +128,27 @@ def backtest_xgb_long_only(
         if len(feats) == 0:
             continue
 
+        # `build_features()` currently returns OHLCV-derived features only.
+        # The trained model expects sentiment columns listed in `FEATURE_COLS`.
+        # If we run with neutral sentiment (or Reddit creds are missing),
+        # we inject deterministic defaults so the feature vector matches.
+        sentiment_index = 0.0
+        if sentiment_by_ts is not None:
+            sentiment_index = float(sentiment_by_ts.get(ts, 0.0))
+        if "sent_mean" not in feats.columns:
+            feats["sent_mean"] = float(sentiment_index)
+        if "sent_count" not in feats.columns:
+            feats["sent_count"] = 1.0 if float(sentiment_index) != 0.0 else 0.0
+        if "sent_pos_share" not in feats.columns:
+            feats["sent_pos_share"] = 1.0 if float(sentiment_index) > 0 else 0.0
+        if "sent_neg_share" not in feats.columns:
+            feats["sent_neg_share"] = 1.0 if float(sentiment_index) < 0 else 0.0
+
         rule_score = _rule_signal(feats)
-        X_last = feats[FEATURE_COLS].astype(np.float32).iloc[[-1]]
+        X_last = feats[expected_cols_list].astype(np.float32).iloc[[-1]]
         proba_up = float(model.predict_proba(X_last)[0][1])
         ml_score = (proba_up - 0.5) * 2.0
         fused = (rules_weight * rule_score) + (ml_weight * ml_score)
-
-        sentiment_index = 0.0
-        if sentiment_by_ts is not None:
-            # df['ts'] is minute granularity; map directly.
-            sentiment_index = float(sentiment_by_ts.get(ts, 0.0))
 
         vetoed = sentiment_index <= veto_threshold
         action: Literal["BUY", "SELL", "HOLD"] = "HOLD"
