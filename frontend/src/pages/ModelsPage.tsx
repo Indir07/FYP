@@ -82,6 +82,7 @@ export function ModelsPage() {
   const q = useQuery({ queryKey: ['coins', 'recommended'], queryFn: fetchRecommended })
   const modelsQ = useQuery({ queryKey: ['ml', 'models'], queryFn: fetchModels, refetchInterval: 5000 })
   const [jobId, setJobId] = useState<string | null>(null)
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null)
   const jobQ = useQuery({
     queryKey: ['ml', 'job', jobId],
     queryFn: () => fetchJob(jobId!),
@@ -120,7 +121,24 @@ export function ModelsPage() {
           >
             Train + Auto-tune (recommended)
           </button>
-          <button className="cv-btn cv-btnPrimary">Activate selected</button>
+          <button
+            className="cv-btn cv-btnPrimary"
+            onClick={async () => {
+              if (!selectedModelId) {
+                alert('Select a model first.')
+                return
+              }
+              const res = await fetch('http://localhost:8000/api/ml/models/activate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model_id: selectedModelId }),
+              })
+              if (!res.ok) throw new Error('Failed to activate model')
+              // modelsQ refetches automatically (refetchInterval=5000).
+            }}
+          >
+            Activate selected
+          </button>
         </div>
       </div>
 
@@ -202,7 +220,12 @@ export function ModelsPage() {
                 </tr>
               ) : (
                 modelsQ.data.models.map((m) => (
-                  <tr key={m.id}>
+                  <tr
+                    key={m.id}
+                    onClick={() => setSelectedModelId(m.id)}
+                    style={{ cursor: 'pointer', opacity: selectedModelId && selectedModelId !== m.id ? 0.9 : 1 }}
+                    title="Click to select"
+                  >
                     <td>{m.id}</td>
                     <td>{m.kind}</td>
                     <td>

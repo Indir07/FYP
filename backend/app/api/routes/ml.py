@@ -85,6 +85,11 @@ async def start_train_xgb(req: TrainRequest, bg: BackgroundTasks):
         metrics=result.metrics,
       )
       save_artifact(entry, result.model)
+      # UC-06: When a training run finishes, automatically activate the newly
+      # trained model so the UI trading/backtesting endpoints use it.
+      # (The periodic `trainer` container also activates on its own, but this
+      # keeps the UX correct when training is started from the operator UI.)
+      set_active(entry.id)
 
       _jobs[job_id]["status"] = "succeeded"
       _jobs[job_id]["ended_at"] = datetime.utcnow()
