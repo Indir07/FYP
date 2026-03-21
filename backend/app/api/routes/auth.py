@@ -56,6 +56,16 @@ class LoginResendRequest(BaseModel):
     challenge_id: int
 
 
+class ForgotPasswordRequest(BaseModel):
+    email_or_username: str = Field(min_length=3, max_length=255)
+
+
+class ResetPasswordConfirmRequest(BaseModel):
+    token: str = Field(min_length=20)
+    new_password: str = Field(min_length=8, max_length=128)
+    confirm_password: str = Field(min_length=8, max_length=128)
+
+
 class AuthResponse(BaseModel):
     token: str
     token_type: str = "bearer"
@@ -97,6 +107,32 @@ def _send_login_code(email: str, code: str, device_label: str) -> None:
             f"A login attempt was made from: {device_label}\n\n"
             f"Your CryptoVolt login verification code is: {code}\n\n"
             f"This code expires in {VERIFY_CODE_MINUTES} minutes."
+        ),
+    )
+
+
+def _create_reset_token(user: User) -> str:
+    now = datetime.now(timezone.utc)
+    exp_minutes = int(os.getenv("AUTH_RESET_EXPIRE_MINUTES", "30"))
+    payload = {
+        "sub": str(user.id),
+        "purpose": "reset_password",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=exp_minutes)).timestamp()),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
+
+def _send_reset_link(email: str, token: str) -> None:
+    frontend_base = os.getenv("FRONTEND_BASE_URL", "http://localhost:5173").rstrip("/")
+    link = f"{frontend_base}/reset-password?token={token}"
+    exp_minutes = int(os.getenv("AUTH_RESET_EXPIRE_MINUTES", "30"))
+    send_email(
+        to_email=email,
+        subject="CryptoVolt password reset link",
+        body=(
+            f"Click the link below to reset your CryptoVolt password:\n\n{link}\n\n"
+            f"This link expires in {exp_minutes} minutes."
         ),
     )
 
@@ -296,4 +332,45 @@ def login_resend(req: LoginResendRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Failed to resend login verification email. Please retry in a few seconds.",
         ) from exc
+
+
+@router.post("/password/forgot")
+def password_forgot(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    key = req.email_or_username.strip().lower()
+    user = db.query(User).filter(or_(User.email == key, User.username == key)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User is not registered.")
+
+    token = _create_reset_token(user)
+    try:
+        _send_reset_link(user.email, token)
+        return {"message": "Password reset link sent to your registered email."}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to send password reset email. Please retry in a few seconds.",
+        ) from exc
+
+
+@router.post("/password/reset")
+def password_reset(req: ResetPasswordConfirmRequest, db: Session = Depends(get_db)):
+    if req.new_password != req.confirm_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match.")
+    try:
+        payload = jwt.decode(req.token, JWT_SECRET, algorithms=[JWT_ALG])
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired reset link.") from exc
+    if payload.get("purpose") != "reset_password":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token purpose.")
+
+    sub = str(payload.get("sub", "")).strip()
+    if not sub.isdigit():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token subject.")
+    user = db.query(User).filter(User.id == int(sub)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    user.password_hash = pwd_ctx.hash(req.new_password)
+    db.commit()
+    return {"message": "Password has been reset successfully."}
 

@@ -7,6 +7,7 @@ import { BacktestingPage } from './pages/BacktestingPage.tsx'
 import { AlertsPage } from './pages/AlertsPage.tsx'
 import { LoginPage } from './pages/LoginPage.tsx'
 import { SignupPage } from './pages/SignupPage.tsx'
+import { ResetPasswordPage } from './pages/ResetPasswordPage.tsx'
 import { RequireAuth } from './components/auth/RequireAuth.tsx'
 import { isAuthenticated } from './lib/auth'
 
@@ -15,6 +16,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         path="/auth"
         element={<Navigate to={isAuthenticated() ? '/dashboard' : '/login'} replace />}

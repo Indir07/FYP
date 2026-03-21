@@ -143,6 +143,9 @@ export function LoginPage() {
                 required
                 minLength={8}
               />
+              <div className="cv-authInlineRow">
+                <Link className="cv-authLink" to="/reset-password">Forgot password?</Link>
+              </div>
             </>
           ) : (
             <>
