@@ -23,9 +23,26 @@ type RecommendedResponse = {
 }
 
 async function fetchRecommended(): Promise<RecommendedResponse> {
-  const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=0.5')
-  if (!res.ok) throw new Error('Failed to fetch recommended coins')
-  return res.json()
+  const fallback: RecommendedResponse = {
+    as_of: new Date().toISOString(),
+    quote_asset: 'USDT',
+    criteria: {},
+    coins: [
+      { symbol: 'BTCUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'ETHUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'SOLUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'XRPUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'DOGEUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+    ],
+  }
+  try {
+    const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=2')
+    if (!res.ok) return fallback
+    const data = (await res.json()) as RecommendedResponse
+    return data.coins?.length ? data : fallback
+  } catch {
+    return fallback
+  }
 }
 
 async function startTrainXgbRecommended(): Promise<{ job_id: string }> {
@@ -35,7 +52,7 @@ async function startTrainXgbRecommended(): Promise<{ job_id: string }> {
     body: JSON.stringify({
       universe: 'recommended',
       limit: 10,
-      max_price: 0.5,
+      max_price: 2,
       interval: '1m',
       limit_per_symbol: 750,
       tune: true,

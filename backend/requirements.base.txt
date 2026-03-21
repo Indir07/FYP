@@ -1,11 +1,13 @@
 fastapi
 uvicorn[standard]
 pydantic
+email-validator
 pydantic-settings
 sqlalchemy
 alembic
 passlib[bcrypt]
 python-jose[cryptography]
+psycopg2-binary
 httpx
 python-multipart
 pandas

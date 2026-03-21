@@ -9,9 +9,23 @@ type RecommendedResponse = {
 }
 
 async function fetchRecommended(): Promise<RecommendedResponse> {
-  const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=0.5')
-  if (!res.ok) throw new Error('Failed to fetch recommended coins')
-  return res.json()
+  const fallback: RecommendedResponse = {
+    coins: [
+      { symbol: 'BTCUSDT' },
+      { symbol: 'ETHUSDT' },
+      { symbol: 'SOLUSDT' },
+      { symbol: 'XRPUSDT' },
+      { symbol: 'DOGEUSDT' },
+    ],
+  }
+  try {
+    const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=2')
+    if (!res.ok) return fallback
+    const data = (await res.json()) as RecommendedResponse
+    return data.coins?.length ? data : fallback
+  } catch {
+    return fallback
+  }
 }
 
 type BacktestMetrics = {

@@ -134,6 +134,25 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.cv-userPill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(73, 163, 255, 0.4);
+  color: #beddff;
+  background: rgba(73, 163, 255, 0.12);
+}
+
+.cv-logoutBtn {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 123, 156, 0.45);
+  color: #ffd5df;
+  background: rgba(255, 123, 156, 0.12);
+  cursor: pointer;
+}
+
 .cv-content {
   padding: 22px;
 }

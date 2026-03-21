@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { Activity, AlertTriangle, Bot, Settings, TestTube } from 'lucide-react'
 import './appShell.css'
+import { clearAuth, getAuthUser } from '../../lib/auth'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: Activity },
@@ -12,6 +13,14 @@ const navItems = [
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
+  const user = getAuthUser()
+
+  function logout() {
+    clearAuth()
+    navigate('/login')
+  }
+
   return (
     <div className="cv-shell">
       <aside className="cv-sidebar">
@@ -52,9 +61,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="cv-topbar">
           <div className="cv-topbarTitle">Operator UI</div>
           <div className="cv-topbarMeta">
+            <span className="cv-userPill">
+              {user?.username ? `@${user.username}` : 'Unknown user'}
+            </span>
             <span className="cv-badge">TLS</span>
             <span className="cv-badge">Audit logs</span>
             <span className="cv-badge">Kill switch</span>
+            <button className="cv-logoutBtn" onClick={logout}>
+              Logout
+            </button>
           </div>
         </div>
         <div className="cv-content">{children}</div>

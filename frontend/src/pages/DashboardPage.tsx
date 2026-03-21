@@ -41,10 +41,16 @@ type RecommendedResponse = {
 }
 
 async function fetchRecommendedCoins(): Promise<string[]> {
-  const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=0.5')
-  if (!res.ok) throw new Error('Failed to load recommended coins')
-  const j = (await res.json()) as RecommendedResponse
-  return j.coins.map((c) => c.symbol)
+  const fallback = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT']
+  try {
+    const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=2')
+    if (!res.ok) return fallback
+    const j = (await res.json()) as RecommendedResponse
+    const syms = j.coins.map((c) => c.symbol).filter(Boolean)
+    return syms.length > 0 ? syms : fallback
+  } catch {
+    return fallback
+  }
 }
 
 async function fetchKlines(symbol: string): Promise<Candle[]> {

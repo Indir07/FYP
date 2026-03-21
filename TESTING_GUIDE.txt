@@ -1,0 +1,264 @@
+CryptoVolt Full Testing Guidance
+================================
+
+Project URLs
+------------
+- Frontend: http://localhost:5173
+- Backend API docs (Swagger): http://localhost:8000/docs
+- Backend OpenAPI JSON: http://localhost:8000/openapi.json
+
+
+1) Start and Verify the Project
+-------------------------------
+1. Open terminal in D:\CryptoVolt
+2. Run:
+   docker compose up -d
+3. Verify:
+   docker compose ps
+4. Confirm services are reachable:
+   - Open http://localhost:5173 in browser
+   - Open http://localhost:8000/docs in browser
+
+Expected:
+- backend, frontend, trainer containers show "Up"
+- Frontend loads dashboard
+- API docs page loads
+
+
+2) Environment/Security Checklist
+---------------------------------
+Check D:\CryptoVolt\.env contains:
+- DISCORD_WEBHOOK_URL=...
+- REDDIT_CLIENT_ID=...
+- REDDIT_CLIENT_SECRET=...
+- REDDIT_USER_AGENT=...
+
+Important:
+- .env must never be committed.
+- If secrets were exposed, rotate them immediately.
+
+
+3) Core API Smoke Tests (Swagger UI)
+------------------------------------
+Use http://localhost:8000/docs
+
+A) Coins recommended
+- GET /api/coins/recommended
+- Try:
+  limit=10
+  max_price=5
+  min_change_24h=-1
+  min_quote_volume_24h=5000000
+
+Expected:
+- returns list of symbols with score/volume metrics
+
+B) Model list
+- GET /api/ml/models
+Expected:
+- at least one model entry
+- one active model
+
+C) Backtest run
+- POST /api/backtest/run
+Body example:
+{
+  "symbol": "WAXPUSDT",
+  "interval": "1m",
+  "limit": 400,
+  "sentiment_mode": "reddit",
+  "trade_fraction_cash": 0.1,
+  "use_proba_thresholds": true,
+  "buy_proba_threshold": 0.2,
+  "sell_proba_threshold": 0.45,
+  "stop_loss_bps": 250,
+  "take_profit_bps": 400,
+  "trailing_stop_bps": 0
+}
+
+Expected:
+- metrics object contains max_drawdown, sharpe, total_return/cagr (if enough data), etc.
+- trades array exists
+
+
+4) Train a New Model with Live Sentiment
+----------------------------------------
+In Swagger:
+- POST /api/ml/train/xgb
+
+Recommended body:
+{
+  "universe": "custom",
+  "symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT"],
+  "interval": "1m",
+  "limit_per_symbol": 350,
+  "tune": false,
+  "optimize_metric": "f1",
+  "label_horizon": 1,
+  "label_threshold": 0.0,
+  "sentiment_post_limit": 60,
+  "sentiment_required": false,
+  "min_sentiment_coverage": 0.0
+}
+
+Then:
+1. Copy returned job_id
+2. Poll GET /api/ml/jobs/{job_id} until status=succeeded
+3. Open GET /api/ml/models and verify newest model
+4. Check metrics.sentiment_coverage_mean > 0 for sentiment usage
+
+Notes:
+- strict sentiment_required=true may fail if Reddit mentions are sparse
+- use false for reliability, then validate sentiment_coverage_mean
+
+
+5) Activate and Compare Models
+------------------------------
+1. GET /api/ml/models
+2. Pick model_id
+3. POST /api/ml/models/activate with:
+   { "model_id": "xgb_classifier_xxx" }
+4. Re-run POST /api/backtest/run on WAXPUSDT and PHAUSDT
+5. Compare:
+   - lower max_drawdown (closer to 0 is better)
+   - better sharpe
+   - better cagr/return consistency
+
+
+6) Frontend End-to-End Tests
+----------------------------
+A) Dashboard page (http://localhost:5173)
+- Verify market cards/tables load
+- Verify model status/active model appears
+
+B) Models page
+- Start training from UI
+- Wait for job completion
+- Confirm model appears and activation works
+
+C) Backtesting page
+- Test with symbols:
+  WAXPUSDT, PHAUSDT
+- Test both:
+  - neutral sentiment_mode
+  - reddit sentiment_mode
+- Toggle:
+  use probability thresholds ON
+  buy=0.2, sell=0.45
+- Confirm chart/metrics update and dropdown/input visibility is good
+
+
+7) Automation (Paper Trading) Tests
+-----------------------------------
+1. Start from Dashboard automation controls (or API):
+   POST /api/trading/automation/start
+2. Suggested config:
+   - interval: 1m
+   - stop_loss_bps: 250
+   - take_profit_bps: 400
+   - use_proba_thresholds: true
+   - buy_proba_threshold: 0.2
+   - sell_proba_threshold: 0.45
+3. Let it run for several ticks.
+4. Stop automation:
+   POST /api/trading/automation/stop
+
+Expected:
+- simulated BUY/SELL actions occur
+- risk exits (stop/take profit) can force SELL
+
+
+8) Discord Alert Test
+---------------------
+Prereq:
+- DISCORD_WEBHOOK_URL valid in .env
+
+How to test:
+1. Trigger events via:
+   - automation start + a trade execution
+   - or any API action that records alert event
+2. Check Discord channel for incoming message.
+3. If no message:
+   - verify webhook URL format
+   - verify backend container restarted after .env changes:
+     docker compose up -d backend
+   - inspect logs:
+     docker compose logs backend --since 10m
+
+
+9) Trainer Schedule Test
+------------------------
+Trainer container runs periodic training.
+
+Check:
+1. docker compose ps (trainer Up)
+2. docker compose logs trainer --since 10m
+3. Validate new job/model entries appear over time in /api/ml/models
+
+If you want immediate run:
+- set RUN_TRAINING_ON_START=1 in .env
+- restart trainer:
+  docker compose up -d trainer
+
+
+10) Troubleshooting
+-------------------
+A) API unreachable
+- Check Docker Desktop is running
+- docker compose ps
+- docker compose up -d backend frontend trainer
+
+B) "Unable to connect to remote server"
+- backend restarting/crashed; wait and retry
+- check backend logs:
+  docker compose logs backend --since 10m
+
+C) Training too slow
+- reduce symbols
+- reduce limit_per_symbol
+- set tune=false
+- lower sentiment_post_limit
+
+D) No usable symbol data fetched
+- if sentiment_required=true, switch to false
+- expand symbols to high-mention coins (BTC/ETH/SOL/XRP/DOGE)
+
+E) Sentiment coverage remains zero
+- verify Reddit keys in .env
+- restart backend after .env change
+- confirm model metrics.sentiment_coverage_mean
+
+
+11) Quick Command Reference
+---------------------------
+Start all:
+docker compose up -d
+
+Stop all:
+docker compose down
+
+Service status:
+docker compose ps
+
+Backend logs:
+docker compose logs backend --since 10m
+
+Frontend logs:
+docker compose logs frontend --since 10m
+
+Trainer logs:
+docker compose logs trainer --since 10m
+
+
+12) Recommended Acceptance Checklist
+------------------------------------
+- [ ] Frontend loads on :5173
+- [ ] Swagger docs load on :8000/docs
+- [ ] Model list returns active model
+- [ ] New training job succeeds
+- [ ] sentiment_coverage_mean is non-zero on at least one trained model
+- [ ] Backtest runs for WAXPUSDT and PHAUSDT
+- [ ] Max drawdown controlled by risk params
+- [ ] Automation start/stop works
+- [ ] Discord webhook receives at least one alert
+

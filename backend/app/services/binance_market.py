@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from typing import Literal
 
@@ -24,10 +25,30 @@ async def fetch_klines(query: KlineQuery) -> pd.DataFrame:
     """
     url = f"{BINANCE_REST_BASE}/api/v3/klines"
     params = {"symbol": query.symbol, "interval": query.interval, "limit": query.limit}
-    async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.get(url, params=params)
-        r.raise_for_status()
-        rows = r.json()
+    # Binance can occasionally timeout; retry a few times before failing.
+    timeout = httpx.Timeout(connect=15.0, read=40.0, write=15.0, pool=15.0)
+    rows = None
+    last_exc: Exception | None = None
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for attempt in range(3):
+            try:
+                r = await client.get(url, params=params)
+                r.raise_for_status()
+                rows = r.json()
+                break
+            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError) as exc:
+                last_exc = exc
+                if attempt < 2:
+                    await asyncio.sleep(0.8 * (attempt + 1))
+                    continue
+                raise RuntimeError(
+                    f"Failed to fetch Binance klines for {query.symbol} after retries: {type(exc).__name__}"
+                ) from exc
+            except Exception as exc:
+                last_exc = exc
+                raise
+    if rows is None:
+        raise RuntimeError(f"Failed to fetch Binance klines for {query.symbol}: {last_exc}")
 
     # Binance format:
     # [ openTime, open, high, low, close, volume, closeTime, quoteAssetVol, trades, ...]

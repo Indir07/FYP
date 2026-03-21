@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import api_router
+from app.db import Base, engine
+from app import models  # noqa: F401
 
 
 def create_app() -> FastAPI:
@@ -16,6 +18,10 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix="/api")
+
+    @app.on_event("startup")
+    def _create_tables():
+        Base.metadata.create_all(bind=engine)
 
     @app.get("/health")
     def health():

@@ -1,4 +1,16 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-cryptovolt}
+      - POSTGRES_USER=${POSTGRES_USER:-cryptovolt}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cryptovolt}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -8,6 +20,7 @@ services:
     environment:
       - CRYPTOVOLT_MODEL_DIR=/data/model_registry
       - CRYPTOVOLT_DATA_DIR=/data/datasets
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg2://cryptovolt:cryptovolt@postgres:5432/cryptovolt}
       # Optional: set this via an .env file on the user PC.
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL:-}
       - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID:-}
@@ -16,6 +29,8 @@ services:
     volumes:
       - ./backend/_model_registry:/data/model_registry
       - ./backend/_datasets:/data/datasets
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   frontend:
@@ -53,4 +68,7 @@ services:
       - TRAIN_REQUEST_TUNE=${TRAIN_REQUEST_TUNE:-0}
       - TRAIN_REQUEST_TUNE_TRIALS=${TRAIN_REQUEST_TUNE_TRIALS:-8}
     restart: unless-stopped
+
+volumes:
+  pg_data:
 

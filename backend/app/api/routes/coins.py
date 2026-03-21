@@ -11,6 +11,8 @@ from app.services.binance_coins import CoinCandidate
 
 router = APIRouter()
 
+_FALLBACK_SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT"]
+
 
 class UniverseResponse(BaseModel):
     as_of: datetime
@@ -34,13 +36,26 @@ async def recommended_coins(
     - liquid: quoteVolume >= min_quote_volume_24h
     Sorted by a simple score combining growth + liquidity and penalizing higher price.
     """
-    coins = await get_recommended_universe(
-        quote_asset=quote_asset,
-        limit=limit,
-        max_price=max_price,
-        min_change_24h=min_change_24h,
-        min_quote_volume_24h=min_quote_volume_24h,
-    )
+    try:
+        coins = await get_recommended_universe(
+            quote_asset=quote_asset,
+            limit=limit,
+            max_price=max_price,
+            min_change_24h=min_change_24h,
+            min_quote_volume_24h=min_quote_volume_24h,
+        )
+    except Exception:
+        # Graceful fallback so the UI can still load and fetch market data.
+        coins = [
+            CoinCandidate(
+                symbol=s,
+                last_price=0.0,
+                price_change_percent_24h=0.0,
+                quote_volume_24h=0.0,
+                score=0.0,
+            )
+            for s in _FALLBACK_SYMBOLS[:limit]
+        ]
     return UniverseResponse(
         as_of=datetime.utcnow(),
         quote_asset=quote_asset,
