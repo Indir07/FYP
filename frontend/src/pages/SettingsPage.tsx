@@ -23,7 +23,8 @@ export function SettingsPage() {
           <div style={{ marginTop: 12, display: 'grid', gap: 12 }}>
             <label>
               <div className="cv-muted">Training universe</div>
-              <select className="cv-input" defaultValue="recommended">
+              <select className="cv-input" defaultValue="top10_famous_growing">
+                <option value="top10_famous_growing">Top-10 famous + growing</option>
                 <option value="recommended">Recommended (cheap + growing)</option>
                 <option value="custom">Custom symbols</option>
               </select>

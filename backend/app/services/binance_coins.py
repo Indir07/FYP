@@ -17,6 +17,18 @@ class _Binance24hTicker(TypedDict, total=False):
 
 
 BINANCE_REST_BASE = "https://api.binance.com"
+TOP10_FAMOUS_GROWTH = [
+    "BTCUSDT",
+    "ETHUSDT",
+    "BNBUSDT",
+    "SOLUSDT",
+    "XRPUSDT",
+    "DOGEUSDT",
+    "ADAUSDT",
+    "TRXUSDT",
+    "AVAXUSDT",
+    "LINKUSDT",
+]
 
 
 class CoinCandidate(BaseModel):
@@ -103,4 +115,50 @@ async def get_recommended_universe(
 
     candidates.sort(key=lambda c: c.score, reverse=True)
     return candidates[:limit]
+
+
+async def get_top10_famous_growing_universe(*, limit: int = 10) -> list[CoinCandidate]:
+    """
+    Curated top-10 major coins with strong liquidity/news coverage.
+    We keep only symbols currently present on Binance and rank by growth+volume.
+    """
+    url = f"{BINANCE_REST_BASE}/api/v3/ticker/24hr"
+    timeout = httpx.Timeout(connect=12.0, read=30.0, write=12.0, pool=12.0)
+    ticker_map: dict[str, _Binance24hTicker] = {}
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        for attempt in range(3):
+            try:
+                r = await client.get(url)
+                r.raise_for_status()
+                data: list[_Binance24hTicker] = r.json()
+                ticker_map = {t.get("symbol", ""): t for t in data if t.get("symbol")}
+                break
+            except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError, httpx.RemoteProtocolError):
+                if attempt < 2:
+                    await asyncio.sleep(0.7 * (attempt + 1))
+                    continue
+                raise
+
+    candidates: list[CoinCandidate] = []
+    for symbol in TOP10_FAMOUS_GROWTH:
+        t = ticker_map.get(symbol)
+        if not t:
+            continue
+        last_price = _to_float(t.get("lastPrice"))
+        change_pct = _to_float(t.get("priceChangePercent"))
+        quote_vol = _to_float(t.get("quoteVolume"))
+        if last_price is None or change_pct is None or quote_vol is None:
+            continue
+        candidates.append(
+            CoinCandidate(
+                symbol=symbol,
+                last_price=last_price,
+                price_change_percent_24h=change_pct,
+                quote_volume_24h=quote_vol,
+                score=(change_pct * 1.0) + (math.log10(max(1.0, quote_vol)) * 2.0),
+            )
+        )
+
+    candidates.sort(key=lambda c: c.score, reverse=True)
+    return candidates[: max(1, min(limit, 10))]
 

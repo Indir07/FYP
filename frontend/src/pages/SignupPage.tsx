@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 import { setAuth } from '../lib/auth'
@@ -61,7 +62,7 @@ export function SignupPage() {
       const j = await res.json().catch(() => ({}))
       setInfo(j?.message ?? 'Verification code sent.')
       setPhase('verify')
-      setResendIn(50)
+      setResendIn(60)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed')
     } finally {
@@ -105,7 +106,7 @@ export function SignupPage() {
       const j = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(j?.detail ?? 'Failed to resend code')
       setInfo(j?.message ?? 'Code resent')
-      setResendIn(50)
+      setResendIn(60)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resend code')
     }

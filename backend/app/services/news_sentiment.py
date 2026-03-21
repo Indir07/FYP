@@ -37,6 +37,10 @@ def reddit_sentiment_features(
         return pd.DataFrame(
             columns=["ts", "symbol", "sent_mean", "sent_count", "sent_pos_share", "sent_neg_share"]
         )
+    if int(post_limit) <= 0:
+        return pd.DataFrame(
+            columns=["ts", "symbol", "sent_mean", "sent_count", "sent_pos_share", "sent_neg_share"]
+        )
 
     posts = fetch_symbol_posts(sym_list, limit=max(20, int(post_limit)))
     rows = []

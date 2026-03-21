@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.ml.registry import create_entry, list_entries, save_artifact, set_active
 from app.ml.train_xgb import train_xgb_multi
-from app.services.binance_coins import get_recommended_universe
+from app.services.binance_coins import get_recommended_universe, get_top10_famous_growing_universe
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ _jobs: dict[str, dict] = {}
 
 
 class TrainRequest(BaseModel):
-  universe: Literal["recommended", "custom"] = "recommended"
+  universe: Literal["recommended", "top10_famous_growing", "custom"] = "top10_famous_growing"
   symbols: list[str] = Field(default_factory=list)
   limit: int = 20
   max_price: float = 2.0
@@ -75,6 +75,9 @@ async def start_train_xgb(req: TrainRequest, bg: BackgroundTasks):
           min_change_24h=req.min_change_24h,
           min_quote_volume_24h=req.min_quote_volume_24h,
         )
+        symbols = [c.symbol for c in coins]
+      elif req.universe == "top10_famous_growing":
+        coins = await get_top10_famous_growing_universe(limit=min(req.limit, 10))
         symbols = [c.symbol for c in coins]
       else:
         symbols = req.symbols

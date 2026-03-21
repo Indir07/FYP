@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -40,14 +40,29 @@ type RecommendedResponse = {
   coins: RecommendedCoin[]
 }
 
+const TOP10_COINS = [
+  'BTCUSDT',
+  'ETHUSDT',
+  'BNBUSDT',
+  'SOLUSDT',
+  'XRPUSDT',
+  'DOGEUSDT',
+  'ADAUSDT',
+  'TRXUSDT',
+  'AVAXUSDT',
+  'LINKUSDT',
+]
+const DASHBOARD_SYMBOL_KEY = 'cv_dashboard_selected_symbol'
+
 async function fetchRecommendedCoins(): Promise<string[]> {
-  const fallback = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT']
+  const fallback = TOP10_COINS
   try {
-    const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=2')
+    const res = await fetch('http://localhost:8000/api/coins/recommended?strategy=top10_famous_growing&limit=10')
     if (!res.ok) return fallback
     const j = (await res.json()) as RecommendedResponse
-    const syms = j.coins.map((c) => c.symbol).filter(Boolean)
-    return syms.length > 0 ? syms : fallback
+    const allowed = new Set(j.coins.map((c) => c.symbol).filter(Boolean))
+    const filtered = TOP10_COINS.filter((s) => allowed.has(s))
+    return filtered.length > 0 ? filtered : fallback
   } catch {
     return fallback
   }
@@ -105,6 +120,8 @@ async function fetchDecision(symbol: string, sentimentIndex: number): Promise<De
 export function DashboardPage() {
   const [symbols, setSymbols] = useState<string[]>([])
   const [symbol, setSymbol] = useState<string | null>(null)
+  const [coinMenuOpen, setCoinMenuOpen] = useState(false)
+  const coinMenuRef = useRef<HTMLDivElement | null>(null)
   const [candles, setCandles] = useState<Candle[]>([])
   const [sentiment, setSentiment] = useState<Sentiment | null>(null)
   const [decision, setDecision] = useState<Decision | null>(null)
@@ -120,7 +137,7 @@ export function DashboardPage() {
   }
 
   async function startAutomation(sym: string): Promise<void> {
-    const qty = sym === 'WAXPUSDT' ? 0.2 : 1
+    const qty = sym === 'WAXPUSDT' ? 0.1 : 0.1
     const res = await fetch('http://localhost:8000/api/trading/automation/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -135,11 +152,11 @@ export function DashboardPage() {
         tick_seconds: 30,
         sentiment_lookback_minutes: 60,
         // Safer defaults tuned via backtesting.
-        stop_loss_bps: 250,
-        take_profit_bps: 400,
+        stop_loss_bps: 120,
+        take_profit_bps: 220,
         trailing_stop_bps: 0,
         use_proba_thresholds: true,
-        buy_proba_threshold: 0.2,
+        buy_proba_threshold: 0.15,
         sell_proba_threshold: 0.45,
       }),
     })
@@ -171,18 +188,20 @@ export function DashboardPage() {
   }
 
   useEffect(() => {
-    // Load top-10 cheapest growing coins once and default to the first.
+    // Load curated top-10 famous growing coins once and default to the first.
     ;(async () => {
       try {
         const syms = await fetchRecommendedCoins()
         setSymbols(syms)
         if (!symbol && syms.length > 0) {
-          setSymbol(syms[0])
-          await refreshAll(syms[0])
+          const saved = window.localStorage.getItem(DASHBOARD_SYMBOL_KEY)
+          const initial = saved && syms.includes(saved) ? saved : syms[0]
+          setSymbol(initial)
+          await refreshAll(initial)
         }
       } catch (e) {
         console.error(e)
-        setError('Failed to load recommended cheap coins.')
+        setError('Failed to load recommended top-10 coins.')
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -201,6 +220,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (symbol) {
+      window.localStorage.setItem(DASHBOARD_SYMBOL_KEY, symbol)
       void refreshAll(symbol)
     }
   }, [symbol])
@@ -247,6 +267,17 @@ export function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [automationOn, symbol])
 
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (!coinMenuRef.current) return
+      if (!coinMenuRef.current.contains(e.target as Node)) {
+        setCoinMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
+
   const latest = useMemo(() => (candles.length ? candles[candles.length - 1] : null), [candles])
 
   return (
@@ -259,17 +290,34 @@ export function DashboardPage() {
           </div>
         </div>
         <div className="cv-row">
-          <select
-            className="cv-input"
-            value={symbol ?? ''}
-            onChange={(e) => setSymbol(e.target.value)}
-          >
-            {symbols.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <div className="cv-coinSelect" ref={coinMenuRef}>
+            <button
+              type="button"
+              className="cv-coinSelectBtn"
+              onClick={() => setCoinMenuOpen((v) => !v)}
+              aria-label="Select coin"
+            >
+              <span>{symbol ?? 'Select coin'}</span>
+              <span className="cv-coinSelectArrow">{coinMenuOpen ? '▲' : '▼'}</span>
+            </button>
+            {coinMenuOpen ? (
+              <div className="cv-coinSelectMenu">
+                {symbols.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`cv-coinOption ${s === symbol ? 'cv-coinOptionActive' : ''}`}
+                    onClick={() => {
+                      setSymbol(s)
+                      setCoinMenuOpen(false)
+                    }}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <button
             className="cv-btn"
             onClick={() => symbol && void refreshAll(symbol)}

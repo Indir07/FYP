@@ -2,11 +2,6 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import './page.css'
 
-const mockModels = [
-  { id: 'xgb_v1', name: 'XGBoost classifier', version: 'v1', metric: 'AUC 0.61', active: true },
-  { id: 'lstm_v1', name: 'LSTM forecaster', version: 'v1', metric: 'RMSE 0.012', active: false },
-]
-
 type RecommendedCoin = {
   symbol: string
   last_price: number
@@ -30,13 +25,18 @@ async function fetchRecommended(): Promise<RecommendedResponse> {
     coins: [
       { symbol: 'BTCUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
       { symbol: 'ETHUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'BNBUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
       { symbol: 'SOLUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
       { symbol: 'XRPUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
       { symbol: 'DOGEUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'ADAUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'TRXUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'AVAXUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
+      { symbol: 'LINKUSDT', last_price: 0, price_change_percent_24h: 0, quote_volume_24h: 0, score: 0 },
     ],
   }
   try {
-    const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=2')
+    const res = await fetch('http://localhost:8000/api/coins/recommended?strategy=top10_famous_growing&limit=10')
     if (!res.ok) return fallback
     const data = (await res.json()) as RecommendedResponse
     return data.coins?.length ? data : fallback
@@ -50,9 +50,8 @@ async function startTrainXgbRecommended(): Promise<{ job_id: string }> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      universe: 'recommended',
+      universe: 'top10_famous_growing',
       limit: 10,
-      max_price: 2,
       interval: '1m',
       limit_per_symbol: 750,
       tune: true,
@@ -105,7 +104,7 @@ export function ModelsPage() {
     queryKey: ['ml', 'job', jobId],
     queryFn: () => fetchJob(jobId!),
     enabled: Boolean(jobId),
-    refetchInterval: (data) => (data?.status === 'succeeded' || data?.status === 'failed' ? false : 2000),
+    refetchInterval: 2000,
   })
 
   const jobSummary = useMemo(() => {
@@ -122,7 +121,7 @@ export function ModelsPage() {
         <div>
           <div className="cv-h1">Manage Model Training & Version Selection</div>
           <div className="cv-sub">
-            UC-06. Train models on a “cheap + growing” coin universe and activate a version.
+            UC-06. Train models on top-10 famous, liquid, and growth-focused coins and activate a version.
           </div>
         </div>
         <div className="cv-row">
@@ -175,9 +174,9 @@ export function ModelsPage() {
       ) : null}
 
       <div className="cv-card">
-        <div className="cv-cardTitle">Recommended training universe (cheap + growing)</div>
+        <div className="cv-cardTitle">Recommended training universe (top-10 famous + growing)</div>
         <div className="cv-muted" style={{ marginTop: 10 }}>
-          Filter: USDT pairs, price ≤ 2, positive 24h growth, minimum liquidity.
+          Curated symbols with high Binance liquidity and strong public/news coverage.
         </div>
         <div style={{ marginTop: 12, overflowX: 'auto' }}>
           {q.isLoading ? (
@@ -197,7 +196,7 @@ export function ModelsPage() {
                 </tr>
               </thead>
               <tbody>
-                {q.data.coins.map((c) => (
+                {(q.data?.coins ?? []).map((c) => (
                   <tr key={c.symbol}>
                     <td>{c.symbol}</td>
                     <td>{c.last_price}</td>
@@ -237,7 +236,7 @@ export function ModelsPage() {
                   </td>
                 </tr>
               ) : (
-                modelsQ.data.models.map((m) => (
+                (modelsQ.data?.models ?? []).map((m) => (
                   <tr
                     key={m.id}
                     onClick={() => setSelectedModelId(m.id)}

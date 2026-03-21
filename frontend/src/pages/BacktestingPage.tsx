@@ -13,13 +13,18 @@ async function fetchRecommended(): Promise<RecommendedResponse> {
     coins: [
       { symbol: 'BTCUSDT' },
       { symbol: 'ETHUSDT' },
+      { symbol: 'BNBUSDT' },
       { symbol: 'SOLUSDT' },
       { symbol: 'XRPUSDT' },
       { symbol: 'DOGEUSDT' },
+      { symbol: 'ADAUSDT' },
+      { symbol: 'TRXUSDT' },
+      { symbol: 'AVAXUSDT' },
+      { symbol: 'LINKUSDT' },
     ],
   }
   try {
-    const res = await fetch('http://localhost:8000/api/coins/recommended?limit=10&max_price=2')
+    const res = await fetch('http://localhost:8000/api/coins/recommended?strategy=top10_famous_growing&limit=10')
     if (!res.ok) return fallback
     const data = (await res.json()) as RecommendedResponse
     return data.coins?.length ? data : fallback
@@ -65,12 +70,12 @@ export function BacktestingPage() {
   const [interval, setInterval] = useState<'1m' | '5m' | '15m' | '1h'>('1m')
   const [limit, setLimit] = useState(300)
   const [sentimentMode, setSentimentMode] = useState<'neutral' | 'reddit'>('neutral')
-  const [tradeFractionCash, setTradeFractionCash] = useState(0.5)
-  const [stopLossBps, setStopLossBps] = useState(250)
-  const [takeProfitBps, setTakeProfitBps] = useState(400)
+  const [tradeFractionCash, setTradeFractionCash] = useState(0.1)
+  const [stopLossBps, setStopLossBps] = useState(120)
+  const [takeProfitBps, setTakeProfitBps] = useState(220)
   const [trailingStopBps, setTrailingStopBps] = useState(0)
   const [useProbaThresholds, setUseProbaThresholds] = useState(true)
-  const [buyProbaThreshold, setBuyProbaThreshold] = useState(0.2)
+  const [buyProbaThreshold, setBuyProbaThreshold] = useState(0.15)
   const [sellProbaThreshold, setSellProbaThreshold] = useState(0.45)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -85,8 +90,8 @@ export function BacktestingPage() {
     // Safer default sizing for high-volatility micro-price pair.
     if (symbol === 'WAXPUSDT') {
       setTradeFractionCash(0.1)
-    } else if (tradeFractionCash < 0.5) {
-      setTradeFractionCash(0.5)
+    } else if (tradeFractionCash > 0.2) {
+      setTradeFractionCash(0.1)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol])

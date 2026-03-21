@@ -41,7 +41,8 @@
 }
 
 .cv-row select.cv-input {
-  min-width: 170px;
+  min-width: 220px;
+  max-width: 320px;
 }
 
 .cv-row input[type='number'].cv-input {
@@ -57,6 +58,72 @@
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+}
+
+.cv-coinSelect {
+  position: relative;
+  min-width: 220px;
+}
+
+.cv-coinSelectBtn {
+  width: 100%;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(73, 163, 255, 0.4);
+  background: linear-gradient(135deg, rgba(26, 39, 79, 0.95), rgba(18, 29, 64, 0.95));
+  color: rgba(236, 241, 255, 0.95);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.cv-coinSelectBtn:hover {
+  border-color: rgba(73, 163, 255, 0.75);
+}
+
+.cv-coinSelectArrow {
+  color: rgba(176, 201, 255, 0.95);
+  font-size: 11px;
+}
+
+.cv-coinSelectMenu {
+  position: absolute;
+  z-index: 30;
+  top: 46px;
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(73, 163, 255, 0.35);
+  background: rgba(12, 19, 42, 0.98);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+  padding: 6px;
+}
+
+.cv-coinOption {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: rgba(232, 236, 255, 0.92);
+  padding: 9px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: 560;
+}
+
+.cv-coinOption:hover {
+  background: rgba(73, 163, 255, 0.16);
+}
+
+.cv-coinOptionActive {
+  background: rgba(73, 163, 255, 0.22);
+  color: #ffffff;
 }
 
 .cv-btn {
@@ -90,6 +157,38 @@
 
 .cv-input:focus {
   border-color: rgba(73, 163, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(73, 163, 255, 0.2);
+}
+
+/* Better dropdown visibility and styling across dashboard/backtest pages */
+select.cv-input {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 36px;
+  border-color: rgba(73, 163, 255, 0.28);
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(232, 236, 255, 0.85) 50%),
+    linear-gradient(135deg, rgba(232, 236, 255, 0.85) 50%, transparent 50%),
+    linear-gradient(135deg, rgba(73, 163, 255, 0.14), rgba(162, 93, 255, 0.14));
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px),
+    0 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    100% 100%;
+  background-repeat: no-repeat;
+  font-weight: 560;
+}
+
+select.cv-input:hover {
+  border-color: rgba(73, 163, 255, 0.55);
+}
+
+select.cv-input option {
+  background: #0f1832;
+  color: rgba(235, 240, 255, 0.96);
 }
 
 .cv-grid {

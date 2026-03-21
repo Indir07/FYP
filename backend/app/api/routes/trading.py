@@ -25,21 +25,21 @@ _automation_cfg: dict[str, Any] = {
     "symbol": None,
     "interval": "1m",
     "limit": 200,
-    "qty": 1.0,
+    "qty": 0.1,
     "rules_weight": 0.45,
     "ml_weight": 0.55,
     "veto_threshold": -0.35,
     "tick_seconds": 30,
     "sentiment_lookback_minutes": 60,
     # Risk management (bps). Set to 0 to disable.
-    "stop_loss_bps": 250.0,
-    "take_profit_bps": 400.0,
+    "stop_loss_bps": 120.0,
+    "take_profit_bps": 220.0,
     "trailing_stop_bps": 0.0,
     "buy_fused_threshold": 0.15,
     "sell_fused_threshold": -0.15,
     # Defaults tuned for safer / lower-drawdown behavior (see backtests).
     "use_proba_thresholds": True,
-    "buy_proba_threshold": 0.2,
+    "buy_proba_threshold": 0.15,
     "sell_proba_threshold": 0.45,
 }
 
