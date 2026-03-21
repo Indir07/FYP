@@ -39,7 +39,8 @@ async function startTrainXgbRecommended(): Promise<{ job_id: string }> {
       interval: '1m',
       limit_per_symbol: 750,
       tune: true,
-      tune_trials: 15,
+      tune_trials: 25,
+      optimize_metric: 'accuracy',
     }),
   })
   if (!res.ok) throw new Error('Failed to start training')

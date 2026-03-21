@@ -46,6 +46,11 @@ def decide(
     rules_weight: float = 0.45,
     ml_weight: float = 0.55,
     veto_threshold: float = -0.35,
+    buy_fused_threshold: float = 0.15,
+    sell_fused_threshold: float = -0.15,
+    use_proba_thresholds: bool = False,
+    buy_proba_threshold: float = 0.55,
+    sell_proba_threshold: float = 0.45,
 ) -> Decision:
     feats = build_features(ohlcv)
     if len(feats) < 50:
@@ -93,9 +98,16 @@ def decide(
     if vetoed:
         return Decision(action="HOLD", confidence=abs(fused), vetoed=True, reason="sentiment_veto")
 
-    if fused > 0.15:
+    if use_proba_thresholds:
+        if proba_up >= buy_proba_threshold:
+            return Decision(action="BUY", confidence=abs(fused), vetoed=False, reason="proba_buy")
+        if proba_up <= sell_proba_threshold:
+            return Decision(action="SELL", confidence=abs(fused), vetoed=False, reason="proba_sell")
+        return Decision(action="HOLD", confidence=abs(fused), vetoed=False, reason="proba_hold")
+
+    if fused > buy_fused_threshold:
         return Decision(action="BUY", confidence=abs(fused), vetoed=False, reason="fused_buy")
-    if fused < -0.15:
+    if fused < sell_fused_threshold:
         return Decision(action="SELL", confidence=abs(fused), vetoed=False, reason="fused_sell")
     return Decision(action="HOLD", confidence=abs(fused), vetoed=False, reason="fused_hold")
 

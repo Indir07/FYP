@@ -31,6 +31,16 @@ _automation_cfg: dict[str, Any] = {
     "veto_threshold": -0.35,
     "tick_seconds": 30,
     "sentiment_lookback_minutes": 60,
+    # Risk management (bps). Set to 0 to disable.
+    "stop_loss_bps": 250.0,
+    "take_profit_bps": 400.0,
+    "trailing_stop_bps": 0.0,
+    "buy_fused_threshold": 0.15,
+    "sell_fused_threshold": -0.15,
+    # Defaults tuned for safer / lower-drawdown behavior (see backtests).
+    "use_proba_thresholds": True,
+    "buy_proba_threshold": 0.2,
+    "sell_proba_threshold": 0.45,
 }
 
 
@@ -46,6 +56,11 @@ class DecisionRequest(BaseModel):
     rules_weight: float = 0.45
     ml_weight: float = 0.55
     veto_threshold: float = -0.35
+    buy_fused_threshold: float = 0.15
+    sell_fused_threshold: float = -0.15
+    use_proba_thresholds: bool = False
+    buy_proba_threshold: float = 0.55
+    sell_proba_threshold: float = 0.45
 
 
 class AutomationStartRequest(BaseModel):
@@ -58,6 +73,14 @@ class AutomationStartRequest(BaseModel):
     veto_threshold: float = -0.35
     tick_seconds: int = 30
     sentiment_lookback_minutes: int = 60
+    stop_loss_bps: float = Field(default=250.0, ge=0.0, le=50_000.0)
+    take_profit_bps: float = Field(default=400.0, ge=0.0, le=50_000.0)
+    trailing_stop_bps: float = Field(default=0.0, ge=0.0, le=50_000.0)
+    buy_fused_threshold: float = 0.15
+    sell_fused_threshold: float = -0.15
+    use_proba_thresholds: bool = False
+    buy_proba_threshold: float = 0.55
+    sell_proba_threshold: float = 0.45
 
 
 async def _compute_sentiment_index(*, symbol: str, lookback_minutes: int) -> float:
@@ -103,6 +126,64 @@ async def _automation_loop() -> None:
                     lookback_minutes=int(_automation_cfg["sentiment_lookback_minutes"]),
                 )
 
+                last_close = float(df["close"].iloc[-1])
+                pos = _broker.get_position(sym)
+
+                # Trailing stop needs memory of the highest price since entry.
+                if "_peak_price" not in _automation_cfg:
+                    _automation_cfg["_peak_price"] = {}  # type: ignore[assignment]
+                peak_price_by_sym: dict[str, float] = _automation_cfg["_peak_price"]  # type: ignore[assignment]
+
+                if float(pos.qty) > 0.0:
+                    # Update peak price if we're long.
+                    peak_price_by_sym[sym] = max(float(peak_price_by_sym.get(sym, pos.avg_price or last_close)), last_close)
+
+                    # Risk overrides (aim: reduce maximum loss).
+                    stop_loss_bps = float(_automation_cfg.get("stop_loss_bps", 0.0))
+                    take_profit_bps = float(_automation_cfg.get("take_profit_bps", 0.0))
+                    trailing_stop_bps = float(_automation_cfg.get("trailing_stop_bps", 0.0))
+
+                    stop_price = pos.avg_price * (1.0 - stop_loss_bps / 10_000.0) if stop_loss_bps > 0.0 else None
+                    tp_price = pos.avg_price * (1.0 + take_profit_bps / 10_000.0) if take_profit_bps > 0.0 else None
+                    trail_price = peak_price_by_sym[sym] * (1.0 - trailing_stop_bps / 10_000.0) if trailing_stop_bps > 0.0 else None
+
+                    forced_action: str | None = None
+                    forced_reason: str | None = None
+                    if stop_price is not None and last_close <= float(stop_price):
+                        forced_action = "SELL"
+                        forced_reason = "stop_loss"
+                    elif tp_price is not None and last_close >= float(tp_price):
+                        forced_action = "SELL"
+                        forced_reason = "take_profit"
+                    elif trail_price is not None and last_close <= float(trail_price):
+                        forced_action = "SELL"
+                        forced_reason = "trailing_stop"
+
+                    if forced_action is not None:
+                        trade = _broker.submit(
+                            trade_id=f"auto_{uuid.uuid4().hex[:10]}",
+                            symbol=sym,
+                            side=forced_action,  # "SELL"
+                            qty=float(pos.qty),
+                            price=last_close,
+                        )
+                        record_alert(
+                            alert_type="TRADE_SIM",
+                            message=f"Automation {forced_action} {sym} (risk:{forced_reason}) price={last_close:.6f} pnl_delta={trade.realized_pnl_delta:.6f}",
+                            meta={
+                                "symbol": sym,
+                                "action": forced_action,
+                                "confidence": 0.0,
+                                "reason": forced_reason,
+                                "trade_realized_pnl_delta": trade.realized_pnl_delta,
+                            },
+                        )
+                        # After forced SELL, skip model decision this tick.
+                        continue
+                else:
+                    # Not in position: reset peak memory.
+                    peak_price_by_sym[sym] = 0.0
+
                 d = decide(
                     model_path=active.artifact_path,
                     ohlcv=pd.DataFrame(df),
@@ -110,10 +191,14 @@ async def _automation_loop() -> None:
                     rules_weight=float(_automation_cfg["rules_weight"]),
                     ml_weight=float(_automation_cfg["ml_weight"]),
                     veto_threshold=float(_automation_cfg["veto_threshold"]),
+                    buy_fused_threshold=float(_automation_cfg["buy_fused_threshold"]),
+                    sell_fused_threshold=float(_automation_cfg["sell_fused_threshold"]),
+                    use_proba_thresholds=bool(_automation_cfg.get("use_proba_thresholds", False)),
+                    buy_proba_threshold=float(_automation_cfg.get("buy_proba_threshold", 0.55)),
+                    sell_proba_threshold=float(_automation_cfg.get("sell_proba_threshold", 0.45)),
                 )
 
                 if (not d.vetoed) and d.action in ("BUY", "SELL"):
-                    last_close = float(df["close"].iloc[-1])
                     trade = _broker.submit(
                         trade_id=f"auto_{uuid.uuid4().hex[:10]}",
                         symbol=sym,
@@ -171,6 +256,14 @@ async def start(req: AutomationStartRequest):
             "veto_threshold": req.veto_threshold,
             "tick_seconds": req.tick_seconds,
             "sentiment_lookback_minutes": req.sentiment_lookback_minutes,
+            "stop_loss_bps": req.stop_loss_bps,
+            "take_profit_bps": req.take_profit_bps,
+            "trailing_stop_bps": req.trailing_stop_bps,
+            "buy_fused_threshold": req.buy_fused_threshold,
+            "sell_fused_threshold": req.sell_fused_threshold,
+            "use_proba_thresholds": req.use_proba_thresholds,
+            "buy_proba_threshold": req.buy_proba_threshold,
+            "sell_proba_threshold": req.sell_proba_threshold,
         }
     )
     _state["automation"] = True
@@ -226,6 +319,11 @@ async def decision(req: DecisionRequest):
         rules_weight=req.rules_weight,
         ml_weight=req.ml_weight,
         veto_threshold=req.veto_threshold,
+        buy_fused_threshold=req.buy_fused_threshold,
+        sell_fused_threshold=req.sell_fused_threshold,
+        use_proba_thresholds=req.use_proba_thresholds,
+        buy_proba_threshold=req.buy_proba_threshold,
+        sell_proba_threshold=req.sell_proba_threshold,
     )
     return DecisionResponse(
         as_of=datetime.utcnow(),

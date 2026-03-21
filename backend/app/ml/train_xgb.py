@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -51,21 +51,45 @@ DATASET_DIR.mkdir(parents=True, exist_ok=True)
 
 def _best_threshold(y_true: np.ndarray, proba: np.ndarray) -> tuple[float, float]:
     """
-    Returns (threshold, best_f1) tuned on provided labels/probabilities.
+    Backwards-compatible helper: returns (best_threshold, best_f1) on provided
+    labels/probabilities.
+    """
+    return _best_threshold_metric(y_true, proba, metric="f1")
+
+
+def _best_threshold_metric(
+    y_true: np.ndarray,
+    proba: np.ndarray,
+    *,
+    metric: Literal["f1", "accuracy"] = "f1",
+) -> tuple[float, float]:
+    """
+    Pick a probability threshold that maximizes the chosen metric on (y_true, proba).
     """
     best_t = 0.5
-    best_f1 = -1.0
+    best_val = -1.0
     # Coarse grid is usually enough for trading signals.
-    for t in np.linspace(0.2, 0.8, 25):
+    for t in np.linspace(0.1, 0.9, 41):
         pred = (proba >= t).astype(int)
-        f1 = float(f1_score(y_true, pred, zero_division=0))
-        if f1 > best_f1:
-            best_f1 = f1
+        if metric == "accuracy":
+            val = float((pred == y_true).mean())
+        else:
+            val = float(f1_score(y_true, pred, zero_division=0))
+        if val > best_val:
+            best_val = val
             best_t = float(t)
-    return best_t, best_f1
+    return best_t, best_val
 
 
-async def _load_symbol(symbol: str, interval: str, limit: int) -> pd.DataFrame:
+async def _load_symbol(
+    symbol: str,
+    interval: str,
+    limit: int,
+    *,
+    label_horizon: int,
+    label_threshold: float,
+    sentiment_post_limit: int,
+) -> tuple[pd.DataFrame, dict[str, float]]:
     df = await fetch_klines(KlineQuery(symbol=symbol, interval=interval, limit=limit))
     df["symbol"] = symbol
     feats = build_features(df)
@@ -76,6 +100,7 @@ async def _load_symbol(symbol: str, interval: str, limit: int) -> pd.DataFrame:
             symbols=[symbol],
             start=feats["ts"].min(),
             end=feats["ts"].max(),
+            post_limit=sentiment_post_limit,
         )
         if not sent.empty:
             feats = feats.merge(sent, on=["symbol", "ts"], how="left")
@@ -92,11 +117,18 @@ async def _load_symbol(symbol: str, interval: str, limit: int) -> pd.DataFrame:
         else:
             feats[col] = feats[col].fillna(default)
 
-    y = build_labels(feats, horizon=1, threshold=0.0)
-    feats = feats.iloc[:-1].copy()
-    y = y.iloc[:-1].copy()
+    y = build_labels(feats, horizon=label_horizon, threshold=label_threshold)
+    # Drop the last `label_horizon` rows since future returns become NaN there.
+    # This keeps (X, y) aligned and prevents trailing rows from being
+    # implicitly labeled as 0 due to NaN comparisons.
+    if label_horizon > 0:
+        feats = feats.iloc[:-label_horizon].copy()
+        y = y.iloc[:-label_horizon].copy()
     feats["y"] = y.values
-    return feats
+    sent_cov = 0.0
+    if len(feats) > 0 and "sent_count" in feats.columns:
+        sent_cov = float((feats["sent_count"] > 0).mean())
+    return feats, {"sentiment_coverage": sent_cov}
 
 
 async def train_xgb_multi(
@@ -107,22 +139,41 @@ async def train_xgb_multi(
     random_state: int = 42,
     tune: bool = False,
     tune_trials: int = 25,
+    optimize_metric: Literal["roc_auc", "accuracy", "f1"] = "roc_auc",
+    label_horizon: int = 1,
+    label_threshold: float = 0.0,
+    sentiment_post_limit: int = 200,
+    sentiment_required: bool = False,
+    min_sentiment_coverage: float = 0.02,
 ) -> TrainResult:
     # Load data concurrently but limit concurrency to avoid hammering API.
     sem = asyncio.Semaphore(5)
 
     async def guarded(sym: str):
         async with sem:
-            return await _load_symbol(sym, interval, limit_per_symbol)
+            return await _load_symbol(
+                sym,
+                interval,
+                limit_per_symbol,
+                label_horizon=label_horizon,
+                label_threshold=label_threshold,
+                sentiment_post_limit=sentiment_post_limit,
+            )
 
     frames = await asyncio.gather(*[guarded(s) for s in symbols], return_exceptions=True)
     good: list[pd.DataFrame] = []
+    sentiment_coverages: list[float] = []
     for f in frames:
         if isinstance(f, Exception):
             continue
-        if len(f) < 80:
+        feats, meta = f
+        if len(feats) < 80:
             continue
-        good.append(f)
+        cov = float(meta.get("sentiment_coverage", 0.0))
+        if sentiment_required and cov < float(min_sentiment_coverage):
+            continue
+        good.append(feats)
+        sentiment_coverages.append(cov)
 
     if not good:
         raise RuntimeError("No usable symbol data fetched for training.")
@@ -144,6 +195,14 @@ async def train_xgb_multi(
         X_train_full, y_train_full, test_size=0.2, random_state=random_state, stratify=y_train_full
     )
 
+    pos = float(np.sum(y_train_full))
+    neg = float(len(y_train_full) - pos)
+    scale_pos_weight = (neg / pos) if pos > 0 else 1.0
+    # How much accuracy you can get even with a dumb classifier (predicting
+    # only the majority class) on the test split.
+    pos_rate_test = float(np.mean(y_test))
+    majority_accuracy = float(max(pos_rate_test, 1.0 - pos_rate_test))
+
     base_params = {
         "n_estimators": 300,
         "max_depth": 5,
@@ -155,13 +214,24 @@ async def train_xgb_multi(
         "eval_metric": "logloss",
         "random_state": random_state,
         "tree_method": "hist",
+        "scale_pos_weight": float(scale_pos_weight),
     }
 
     # Baseline fit + eval (always)
     baseline_model = XGBClassifier(**base_params)
     baseline_model.fit(X_train, y_train)
     base_val_proba = baseline_model.predict_proba(X_val)[:, 1]
-    base_t, base_val_f1 = _best_threshold(y_val.to_numpy(), base_val_proba)
+    y_val_np = y_val.to_numpy()
+
+    base_best_f1_t, base_val_f1 = _best_threshold_metric(
+        y_val_np, base_val_proba, metric="f1"
+    )
+    base_best_acc_t, base_val_acc = _best_threshold_metric(
+        y_val_np, base_val_proba, metric="accuracy"
+    )
+
+    # Choose the threshold based on what the caller wants to optimize.
+    base_t = base_best_acc_t if optimize_metric == "accuracy" else base_best_f1_t
 
     base_proba = baseline_model.predict_proba(X_test)[:, 1]
     base_pred = (base_proba >= base_t).astype(int)
@@ -173,6 +243,7 @@ async def train_xgb_multi(
         "f1": float(f1_score(y_test, base_pred, zero_division=0)),
         "threshold": float(base_t),
         "val_f1": float(base_val_f1),
+        "val_accuracy": float(base_val_acc),
     }
 
     chosen_model = baseline_model
@@ -195,11 +266,27 @@ async def train_xgb_multi(
         }
         cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_state)
         estimator = XGBClassifier(**base_params)
+
+        def _tune_scorer(estimator_for_fold, X_fold, y_fold):
+            # Tune via best-threshold selection on the fold.
+            proba = estimator_for_fold.predict_proba(X_fold)[:, 1]
+            y_fold_np = np.asarray(y_fold)
+            _, best_val = _best_threshold_metric(
+                y_fold_np,
+                proba,
+                metric=("accuracy" if optimize_metric == "accuracy" else "f1"),
+            )
+            return best_val
+
+        tune_scoring: Any = "roc_auc"
+        if optimize_metric in ("accuracy", "f1"):
+            tune_scoring = _tune_scorer
+
         search = RandomizedSearchCV(
             estimator=estimator,
             param_distributions=search_space,
             n_iter=max(5, int(tune_trials)),
-            scoring="roc_auc",
+            scoring=tune_scoring,
             cv=cv,
             n_jobs=1,
             random_state=random_state,
@@ -210,7 +297,14 @@ async def train_xgb_multi(
         tuned_params = {**base_params, **search.best_params_}
 
         tuned_val_proba = tuned_model.predict_proba(X_val)[:, 1]
-        tuned_t, tuned_val_f1 = _best_threshold(y_val.to_numpy(), tuned_val_proba)
+        tuned_best_f1_t, tuned_val_f1 = _best_threshold_metric(
+            y_val_np, tuned_val_proba, metric="f1"
+        )
+        tuned_best_acc_t, tuned_val_acc = _best_threshold_metric(
+            y_val_np, tuned_val_proba, metric="accuracy"
+        )
+
+        tuned_t = tuned_best_acc_t if optimize_metric == "accuracy" else tuned_best_f1_t
 
         tuned_proba = tuned_model.predict_proba(X_test)[:, 1]
         tuned_pred = (tuned_proba >= tuned_t).astype(int)
@@ -222,6 +316,7 @@ async def train_xgb_multi(
             "f1": float(f1_score(y_test, tuned_pred, zero_division=0)),
             "threshold": float(tuned_t),
             "val_f1": float(tuned_val_f1),
+            "val_accuracy": float(tuned_val_acc),
         }
 
         tuning_details = {
@@ -231,10 +326,25 @@ async def train_xgb_multi(
             "tuned": tuned_metrics,
         }
 
-        # Keep tuned model only if it improves held-out AUC, or equal AUC but better F1.
-        if (tuned_metrics["auc"] > baseline_metrics["auc"]) or (
-            tuned_metrics["auc"] == baseline_metrics["auc"] and tuned_metrics["f1"] > baseline_metrics["f1"]
-        ):
+        # Keep tuned model only if it improves the requested metric.
+        if optimize_metric == "accuracy":
+            better = (tuned_metrics["accuracy"] > baseline_metrics["accuracy"]) or (
+                tuned_metrics["accuracy"] == baseline_metrics["accuracy"]
+                and tuned_metrics["f1"] > baseline_metrics["f1"]
+            )
+        elif optimize_metric == "f1":
+            better = (tuned_metrics["f1"] > baseline_metrics["f1"]) or (
+                tuned_metrics["f1"] == baseline_metrics["f1"]
+                and tuned_metrics["auc"] >= baseline_metrics["auc"]
+            )
+        else:
+            # roc_auc
+            better = (tuned_metrics["auc"] > baseline_metrics["auc"]) or (
+                tuned_metrics["auc"] == baseline_metrics["auc"]
+                and tuned_metrics["f1"] > baseline_metrics["f1"]
+            )
+
+        if better:
             chosen_model = tuned_model
             chosen_params = tuned_params
             chosen_metrics = tuned_metrics
@@ -244,8 +354,11 @@ async def train_xgb_multi(
         **chosen_metrics,
         "n_samples": int(len(data)),
         "n_symbols": int(len(good)),
+        "sentiment_coverage_mean": float(np.mean(sentiment_coverages)) if sentiment_coverages else 0.0,
         "selected": selected,
         "dataset_path": str(csv_path),
+        "pos_rate_test": pos_rate_test,
+        "majority_accuracy": majority_accuracy,
     }
     if tuning_details is not None:
         final_metrics["tuning"] = tuning_details

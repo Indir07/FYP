@@ -51,6 +51,13 @@ export function BacktestingPage() {
   const [interval, setInterval] = useState<'1m' | '5m' | '15m' | '1h'>('1m')
   const [limit, setLimit] = useState(300)
   const [sentimentMode, setSentimentMode] = useState<'neutral' | 'reddit'>('neutral')
+  const [tradeFractionCash, setTradeFractionCash] = useState(0.5)
+  const [stopLossBps, setStopLossBps] = useState(250)
+  const [takeProfitBps, setTakeProfitBps] = useState(400)
+  const [trailingStopBps, setTrailingStopBps] = useState(0)
+  const [useProbaThresholds, setUseProbaThresholds] = useState(true)
+  const [buyProbaThreshold, setBuyProbaThreshold] = useState(0.2)
+  const [sellProbaThreshold, setSellProbaThreshold] = useState(0.45)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<BacktestResponse | null>(null)
@@ -59,6 +66,16 @@ export function BacktestingPage() {
     if (!symbol && recommended.length > 0) setSymbol(recommended[0])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recommended.join(',')])
+
+  useEffect(() => {
+    // Safer default sizing for high-volatility micro-price pair.
+    if (symbol === 'WAXPUSDT') {
+      setTradeFractionCash(0.1)
+    } else if (tradeFractionCash < 0.5) {
+      setTradeFractionCash(0.5)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol])
 
   async function runBacktest() {
     try {
@@ -72,12 +89,18 @@ export function BacktestingPage() {
           symbol,
           interval,
           limit,
-        sentiment_mode: sentimentMode,
-          trade_fraction_cash: 0.5,
+          sentiment_mode: sentimentMode,
+          trade_fraction_cash: tradeFractionCash,
           fee_bps: 4.0,
           rules_weight: 0.45,
           ml_weight: 0.55,
           veto_threshold: -0.35,
+          stop_loss_bps: stopLossBps,
+          take_profit_bps: takeProfitBps,
+          trailing_stop_bps: trailingStopBps,
+          use_proba_thresholds: useProbaThresholds,
+          buy_proba_threshold: buyProbaThreshold,
+          sell_proba_threshold: sellProbaThreshold,
         }),
       })
       if (!res.ok) throw new Error('Backtest failed')
@@ -132,6 +155,71 @@ export function BacktestingPage() {
             max={2000}
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
+          />
+          <input
+            className="cv-input"
+            type="number"
+            min={0.01}
+            max={1}
+            step={0.01}
+            value={tradeFractionCash}
+            onChange={(e) => setTradeFractionCash(Number(e.target.value))}
+            title="Trade fraction of cash per trade (position size)."
+          />
+          <input
+            className="cv-input"
+            type="number"
+            min={0}
+            max={50000}
+            value={stopLossBps}
+            onChange={(e) => setStopLossBps(Number(e.target.value))}
+            title="Stop-loss in basis points (bps). 0 disables."
+          />
+          <input
+            className="cv-input"
+            type="number"
+            min={0}
+            max={50000}
+            value={takeProfitBps}
+            onChange={(e) => setTakeProfitBps(Number(e.target.value))}
+            title="Take-profit in basis points (bps). 0 disables."
+          />
+          <input
+            className="cv-input"
+            type="number"
+            min={0}
+            max={50000}
+            value={trailingStopBps}
+            onChange={(e) => setTrailingStopBps(Number(e.target.value))}
+            title="Trailing stop in basis points (bps). 0 disables."
+          />
+          <label className="cv-muted" style={{ marginLeft: 10 }}>
+            <input
+              type="checkbox"
+              checked={useProbaThresholds}
+              onChange={(e) => setUseProbaThresholds(e.target.checked)}
+            />{' '}
+            Use probability thresholds
+          </label>
+          <input
+            className="cv-input"
+            type="number"
+            min={0}
+            max={1}
+            step={0.01}
+            value={buyProbaThreshold}
+            onChange={(e) => setBuyProbaThreshold(Number(e.target.value))}
+            title="BUY threshold on model P(positive). BUY when proba >= this."
+          />
+          <input
+            className="cv-input"
+            type="number"
+            min={0}
+            max={1}
+            step={0.01}
+            value={sellProbaThreshold}
+            onChange={(e) => setSellProbaThreshold(Number(e.target.value))}
+            title="SELL threshold on model P(positive). SELL when proba <= this."
           />
           <button className="cv-btn cv-btnPrimary" onClick={() => void runBacktest()} disabled={running}>
             {running ? 'Running…' : 'Run backtest'}

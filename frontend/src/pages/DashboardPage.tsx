@@ -114,6 +114,7 @@ export function DashboardPage() {
   }
 
   async function startAutomation(sym: string): Promise<void> {
+    const qty = sym === 'WAXPUSDT' ? 0.2 : 1
     const res = await fetch('http://localhost:8000/api/trading/automation/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -121,12 +122,19 @@ export function DashboardPage() {
         symbol: sym,
         interval: '1m',
         limit: 200,
-        qty: 1,
+        qty,
         rules_weight: 0.45,
         ml_weight: 0.55,
         veto_threshold: -0.35,
         tick_seconds: 30,
         sentiment_lookback_minutes: 60,
+        // Safer defaults tuned via backtesting.
+        stop_loss_bps: 250,
+        take_profit_bps: 400,
+        trailing_stop_bps: 0,
+        use_proba_thresholds: true,
+        buy_proba_threshold: 0.2,
+        sell_proba_threshold: 0.45,
       }),
     })
     if (!res.ok) throw new Error('Failed to start automation')

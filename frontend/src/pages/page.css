@@ -29,6 +29,34 @@
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.cv-row .cv-input {
+  /* In a flex row, `width: 100%` causes the controls to shrink too much and
+   * text in dropdowns gets clipped. Let them size based on content. */
+  width: auto;
+  flex: 0 1 auto;
+  min-width: 120px;
+}
+
+.cv-row select.cv-input {
+  min-width: 170px;
+}
+
+.cv-row input[type='number'].cv-input {
+  min-width: 96px;
+}
+
+.cv-row .cv-btn {
+  white-space: nowrap;
+}
+
+.cv-row label.cv-muted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .cv-btn {

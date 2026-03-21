@@ -19,6 +19,7 @@ def reddit_sentiment_features(
     symbols: Iterable[str],
     start: pd.Timestamp,
     end: pd.Timestamp,
+    post_limit: int = 200,
 ) -> pd.DataFrame:
     """
     Aggregate Reddit posts into per-(symbol, minute) sentiment features.
@@ -37,7 +38,7 @@ def reddit_sentiment_features(
             columns=["ts", "symbol", "sent_mean", "sent_count", "sent_pos_share", "sent_neg_share"]
         )
 
-    posts = fetch_symbol_posts(sym_list, limit=200)
+    posts = fetch_symbol_posts(sym_list, limit=max(20, int(post_limit)))
     rows = []
     start_dt = start.to_pydatetime().astimezone(timezone.utc)
     end_dt = end.to_pydatetime().astimezone(timezone.utc)

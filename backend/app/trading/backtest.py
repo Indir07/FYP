@@ -76,11 +76,20 @@ def backtest_xgb_long_only(
     rules_weight: float = 0.45,
     ml_weight: float = 0.55,
     veto_threshold: float = -0.35,
+    buy_fused_threshold: float = 0.15,
+    sell_fused_threshold: float = -0.15,
+    use_proba_thresholds: bool = False,
+    buy_proba_threshold: float = 0.55,
+    sell_proba_threshold: float = 0.45,
+    # Risk management in basis points (bps). Set to 0 to disable.
+    stop_loss_bps: float = 0.0,
+    take_profit_bps: float = 0.0,
+    trailing_stop_bps: float = 0.0,
 ) -> BacktestResult:
     """
     Long-only backtest:
-      - BUY when fused score > +0.15 and no position
-      - SELL when fused score < -0.15 and position exists
+      - BUY when fused score > buy_fused_threshold and no position
+      - SELL when fused score < sell_fused_threshold and position exists
       - HOLD otherwise
     """
     if df.empty:
@@ -112,6 +121,8 @@ def backtest_xgb_long_only(
     trades: list[BacktestTrade] = []
 
     fee_rate = fee_bps / 10_000.0
+
+    peak_price = 0.0
 
     for i in range(len(df)):
         ts = df["ts"].iloc[i]
@@ -155,12 +166,20 @@ def backtest_xgb_long_only(
         if vetoed:
             action = "HOLD"
         else:
-            if fused > 0.15:
-                action = "BUY"
-            elif fused < -0.15:
-                action = "SELL"
+            if use_proba_thresholds:
+                if proba_up >= buy_proba_threshold:
+                    action = "BUY"
+                elif proba_up <= sell_proba_threshold:
+                    action = "SELL"
+                else:
+                    action = "HOLD"
             else:
-                action = "HOLD"
+                if fused > buy_fused_threshold:
+                    action = "BUY"
+                elif fused < sell_fused_threshold:
+                    action = "SELL"
+                else:
+                    action = "HOLD"
 
         if action == "BUY" and position_qty == 0.0:
             notional = cash * trade_fraction_cash
@@ -171,6 +190,7 @@ def backtest_xgb_long_only(
             cash -= notional + fee
             position_qty = qty
             entry_price = price
+            peak_price = price
             trades.append(
                 BacktestTrade(
                     ts=str(ts),
@@ -183,6 +203,28 @@ def backtest_xgb_long_only(
                 )
             )
 
+        # Risk management overrides (reduce maximum loss).
+        if position_qty > 0.0:
+            # Unrealized PnL threshold checks vs entry.
+            if stop_loss_bps > 0.0:
+                stop_price = entry_price * (1.0 - stop_loss_bps / 10_000.0)
+                if price <= stop_price:
+                    action = "SELL"
+            if take_profit_bps > 0.0 and action != "SELL":
+                tp_price = entry_price * (1.0 + take_profit_bps / 10_000.0)
+                if price >= tp_price:
+                    action = "SELL"
+
+            # Trailing stop checks vs peak.
+            if trailing_stop_bps > 0.0 and action != "SELL":
+                peak_price = max(peak_price, price)
+                trail_price = peak_price * (1.0 - trailing_stop_bps / 10_000.0)
+                if price <= trail_price:
+                    action = "SELL"
+            elif trailing_stop_bps <= 0.0:
+                # Keep peak_price consistent even if trailing_stop disabled.
+                peak_price = max(peak_price, price)
+
         if action == "SELL" and position_qty > 0.0:
             qty = position_qty
             notional = qty * price
@@ -191,6 +233,7 @@ def backtest_xgb_long_only(
             cash += notional - fee
             position_qty = 0.0
             entry_price = 0.0
+            peak_price = 0.0
             trades.append(
                 BacktestTrade(
                     ts=str(ts),

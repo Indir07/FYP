@@ -25,6 +25,22 @@ class BacktestRequest(BaseModel):
     rules_weight: float = 0.45
     ml_weight: float = 0.55
     veto_threshold: float = -0.35
+    # If true, BUY/SELL decisions use model probability thresholds directly:
+    # - BUY when proba_up >= buy_proba_threshold
+    # - SELL when proba_up <= sell_proba_threshold
+    use_proba_thresholds: bool = False
+    buy_proba_threshold: float = 0.55
+    sell_proba_threshold: float = 0.45
+    # Fused score thresholds:
+    # - BUY when fused > buy_fused_threshold
+    # - SELL when fused < sell_fused_threshold
+    buy_fused_threshold: float = 0.15
+    sell_fused_threshold: float = -0.15
+    # Risk management (aim: reduce maximum loss / max drawdown).
+    # Values are in basis points (bps). Set to 0 to disable.
+    stop_loss_bps: float = Field(default=250.0, ge=0.0, le=50_000.0)
+    take_profit_bps: float = Field(default=400.0, ge=0.0, le=50_000.0)
+    trailing_stop_bps: float = Field(default=0.0, ge=0.0, le=50_000.0)
 
 
 class BacktestRunResponse(BaseModel):
@@ -74,6 +90,14 @@ async def run_backtest(req: BacktestRequest):
         rules_weight=req.rules_weight,
         ml_weight=req.ml_weight,
         veto_threshold=req.veto_threshold,
+        buy_fused_threshold=req.buy_fused_threshold,
+        sell_fused_threshold=req.sell_fused_threshold,
+        use_proba_thresholds=req.use_proba_thresholds,
+        buy_proba_threshold=req.buy_proba_threshold,
+        sell_proba_threshold=req.sell_proba_threshold,
+        stop_loss_bps=req.stop_loss_bps,
+        take_profit_bps=req.take_profit_bps,
+        trailing_stop_bps=req.trailing_stop_bps,
     )
 
     return BacktestRunResponse(
