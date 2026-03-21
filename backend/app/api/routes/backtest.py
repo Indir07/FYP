@@ -7,7 +7,7 @@ import pandas as pd
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from app.ml.registry import list_entries
+from app.ml.registry import get_model_for_symbol
 from app.services.binance_market import KlineQuery, fetch_klines
 from app.trading.backtest import backtest_xgb_long_only
 from app.services.news_sentiment import reddit_sentiment_features
@@ -41,6 +41,7 @@ class BacktestRequest(BaseModel):
     stop_loss_bps: float = Field(default=250.0, ge=0.0, le=50_000.0)
     take_profit_bps: float = Field(default=400.0, ge=0.0, le=50_000.0)
     trailing_stop_bps: float = Field(default=0.0, ge=0.0, le=50_000.0)
+    max_drawdown_limit: float = Field(default=0.05, ge=0.0, le=1.0)
 
 
 class BacktestRunResponse(BaseModel):
@@ -54,9 +55,8 @@ class BacktestRunResponse(BaseModel):
 
 @router.post("/run", response_model=BacktestRunResponse)
 async def run_backtest(req: BacktestRequest):
-    entries = list_entries()
-    active = next((e for e in entries if e.active), None) or (entries[0] if entries else None)
-    if active is None:
+    model_entry = get_model_for_symbol(req.symbol)
+    if model_entry is None:
         return BacktestRunResponse(
             symbol=req.symbol,
             interval=req.interval,
@@ -81,7 +81,7 @@ async def run_backtest(req: BacktestRequest):
 
     result = backtest_xgb_long_only(
         df=df,
-        model_path=active.artifact_path,
+        model_path=model_entry.artifact_path,
         sentiment_by_ts=sentiment_by_ts,
         symbol=req.symbol,
         interval=req.interval,
@@ -98,6 +98,7 @@ async def run_backtest(req: BacktestRequest):
         stop_loss_bps=req.stop_loss_bps,
         take_profit_bps=req.take_profit_bps,
         trailing_stop_bps=req.trailing_stop_bps,
+        max_drawdown_limit=req.max_drawdown_limit,
     )
 
     return BacktestRunResponse(
@@ -106,6 +107,6 @@ async def run_backtest(req: BacktestRequest):
         as_of=datetime.utcnow(),
         metrics=result.metrics,
         trades=[t.__dict__ for t in result.trades],
-        model_id=active.id,
+        model_id=model_entry.id,
     )
 

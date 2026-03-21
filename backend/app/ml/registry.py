@@ -86,3 +86,28 @@ def set_active(model_id: str) -> ModelEntry | None:
             found = ModelEntry(**updated)
     return found
 
+
+def get_model_for_symbol(symbol: str) -> ModelEntry | None:
+    """
+    Resolve model in this order:
+    1) Most recent symbol-specific model (single-symbol training run).
+    2) Active global model.
+    3) Most recent available model.
+    """
+    entries = list_entries()
+    if not entries:
+        return None
+
+    symbol_upper = symbol.upper()
+    symbol_specific = [
+        e for e in entries
+        if len(e.symbols) == 1 and e.symbols[0].upper() == symbol_upper
+    ]
+    if symbol_specific:
+        return symbol_specific[0]
+
+    active = next((e for e in entries if e.active), None)
+    if active is not None:
+        return active
+    return entries[0]
+

@@ -7,11 +7,11 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, precision_score, recall_score
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, train_test_split
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold, TimeSeriesSplit, train_test_split
 from xgboost import XGBClassifier
 from scipy.stats import randint, uniform
 
-from app.ml.features import build_features, build_labels
+from app.ml.features import build_features, build_trading_labels
 from app.services.binance_market import KlineQuery, fetch_klines
 from app.services.news_sentiment import reddit_sentiment_features
 
@@ -40,6 +40,15 @@ FEATURE_COLS = [
     "rsi_14",
     "bb_width",
     "volume",
+    "vol_20",
+    "vol_60",
+    "vol_regime",
+    "adx_14",
+    "trend_strength",
+    "volume_z20",
+    "rsi_x_trend",
+    "macd_hist_x_vol",
+    "ret1_x_volume_z",
     "sent_mean",
     "sent_count",
     "sent_pos_share",
@@ -81,6 +90,115 @@ def _best_threshold_metric(
     return best_t, best_val
 
 
+def _best_threshold_profit(
+    proba: np.ndarray,
+    future_ret: np.ndarray,
+    *,
+    fee_bps: float = 4.0,
+) -> tuple[float, float]:
+    """
+    Select threshold maximizing expected net PnL on validation.
+    """
+    best_t = 0.5
+    best_pnl = -1e18
+    fee = float(fee_bps) / 10_000.0
+    for t in np.linspace(0.05, 0.95, 91):
+        long_mask = proba >= t
+        if not np.any(long_mask):
+            pnl = -1e9
+        else:
+            pnl = float(np.sum(future_ret[long_mask] - fee))
+        if pnl > best_pnl:
+            best_pnl = pnl
+            best_t = float(t)
+    return best_t, best_pnl
+
+
+def _best_threshold_sharpe(
+    proba: np.ndarray,
+    future_ret: np.ndarray,
+    *,
+    fee_bps: float = 4.0,
+) -> tuple[float, float]:
+    """
+    Select threshold maximizing Sharpe-like ratio on validation trade stream.
+    """
+    best_t = 0.5
+    best_sharpe = -1e18
+    fee = float(fee_bps) / 10_000.0
+    for t in np.linspace(0.05, 0.95, 91):
+        long_mask = proba >= t
+        if not np.any(long_mask):
+            sharpe_like = -1e9
+        else:
+            trade_ret = future_ret[long_mask] - fee
+            std = float(np.std(trade_ret))
+            sharpe_like = float(np.mean(trade_ret) / std) if std > 1e-12 else -1e9
+        if sharpe_like > best_sharpe:
+            best_sharpe = sharpe_like
+            best_t = float(t)
+    return best_t, best_sharpe
+
+
+def _trade_metrics_from_preds(
+    pred: np.ndarray,
+    future_ret: np.ndarray,
+    *,
+    fee_bps: float = 4.0,
+) -> dict[str, float]:
+    """
+    Compute trading-oriented metrics from binary trade decisions.
+    """
+    fee = float(fee_bps) / 10_000.0
+    trade_ret = np.where(pred == 1, future_ret - fee, 0.0)
+    trades = np.count_nonzero(pred == 1)
+    gross_pnl = float(np.sum(trade_ret))
+    avg_trade = float(np.mean(trade_ret[pred == 1])) if trades > 0 else 0.0
+    win_rate = float(np.mean((trade_ret[pred == 1]) > 0.0)) if trades > 0 else 0.0
+    # Naive equity curve for drawdown approximation on decision stream.
+    equity = 1.0 + np.cumsum(trade_ret)
+    peaks = np.maximum.accumulate(equity)
+    dd = (equity - peaks) / np.maximum(peaks, 1e-12)
+    max_dd = float(np.min(dd)) if len(dd) > 0 else 0.0
+    return {
+        "trades": float(trades),
+        "gross_pnl": gross_pnl,
+        "avg_trade_return": avg_trade,
+        "win_rate": win_rate,
+        "max_drawdown_like": max_dd,
+    }
+
+
+def _walk_forward_profit_score(
+    X: pd.DataFrame,
+    y: pd.Series,
+    future_ret: pd.Series,
+    params: dict[str, Any],
+) -> dict[str, float]:
+    """
+    Time-ordered validation to estimate out-of-sample trading behavior.
+    """
+    tscv = TimeSeriesSplit(n_splits=4)
+    fold_pnl: list[float] = []
+    fold_win: list[float] = []
+    for tr_idx, va_idx in tscv.split(X):
+        X_tr, X_va = X.iloc[tr_idx], X.iloc[va_idx]
+        y_tr, y_va = y.iloc[tr_idx], y.iloc[va_idx]
+        fwd_va = future_ret.iloc[va_idx].to_numpy()
+        model = XGBClassifier(**params)
+        model.fit(X_tr, y_tr)
+        proba = model.predict_proba(X_va)[:, 1]
+        t, _ = _best_threshold_profit(proba, fwd_va)
+        pred = (proba >= t).astype(int)
+        tm = _trade_metrics_from_preds(pred, fwd_va)
+        fold_pnl.append(tm["gross_pnl"])
+        fold_win.append(tm["win_rate"])
+    return {
+        "wf_avg_pnl": float(np.mean(fold_pnl)) if fold_pnl else 0.0,
+        "wf_avg_win_rate": float(np.mean(fold_win)) if fold_win else 0.0,
+    }
+
+
 async def _load_symbol(
     symbol: str,
     interval: str,
@@ -88,6 +206,10 @@ async def _load_symbol(
     *,
     label_horizon: int,
     label_threshold: float,
+    label_method: Literal["simple", "vol_cost", "triple_barrier"],
+    label_cost_bps: float,
+    label_vol_mult: float,
+    label_pt_sl_mult: float,
     sentiment_post_limit: int,
 ) -> tuple[pd.DataFrame, dict[str, float]]:
     df = await fetch_klines(KlineQuery(symbol=symbol, interval=interval, limit=limit))
@@ -117,14 +239,24 @@ async def _load_symbol(
         else:
             feats[col] = feats[col].fillna(default)
 
-    y = build_labels(feats, horizon=label_horizon, threshold=label_threshold)
+    y, fwd_ret = build_trading_labels(
+        feats,
+        horizon=label_horizon,
+        base_threshold=label_threshold,
+        method=label_method,
+        cost_bps=label_cost_bps,
+        vol_mult=label_vol_mult,
+        pt_sl_mult=label_pt_sl_mult,
+    )
     # Drop the last `label_horizon` rows since future returns become NaN there.
     # This keeps (X, y) aligned and prevents trailing rows from being
     # implicitly labeled as 0 due to NaN comparisons.
     if label_horizon > 0:
         feats = feats.iloc[:-label_horizon].copy()
         y = y.iloc[:-label_horizon].copy()
+        fwd_ret = fwd_ret.iloc[:-label_horizon].copy()
     feats["y"] = y.values
+    feats["future_ret"] = fwd_ret.values
     sent_cov = 0.0
     if len(feats) > 0 and "sent_count" in feats.columns:
         sent_cov = float((feats["sent_count"] > 0).mean())
@@ -139,9 +271,13 @@ async def train_xgb_multi(
     random_state: int = 42,
     tune: bool = False,
     tune_trials: int = 25,
-    optimize_metric: Literal["roc_auc", "accuracy", "f1"] = "roc_auc",
+    optimize_metric: Literal["roc_auc", "accuracy", "f1", "profit", "sharpe"] = "roc_auc",
     label_horizon: int = 1,
     label_threshold: float = 0.0,
+    label_method: Literal["simple", "vol_cost", "triple_barrier"] = "vol_cost",
+    label_cost_bps: float = 4.0,
+    label_vol_mult: float = 0.35,
+    label_pt_sl_mult: float = 1.2,
     sentiment_post_limit: int = 200,
     sentiment_required: bool = False,
     min_sentiment_coverage: float = 0.02,
@@ -157,6 +293,10 @@ async def train_xgb_multi(
                 limit_per_symbol,
                 label_horizon=label_horizon,
                 label_threshold=label_threshold,
+                label_method=label_method,
+                label_cost_bps=label_cost_bps,
+                label_vol_mult=label_vol_mult,
+                label_pt_sl_mult=label_pt_sl_mult,
                 sentiment_post_limit=sentiment_post_limit,
             )
 
@@ -186,13 +326,14 @@ async def train_xgb_multi(
     data.to_csv(csv_path, index=False)
     X = data[FEATURE_COLS].astype(np.float32)
     y = data["y"].astype(int)
+    future_ret = data["future_ret"].astype(np.float32)
 
-    X_train_full, X_test, y_train_full, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=random_state, stratify=y
+    X_train_full, X_test, y_train_full, y_test, fwd_train_full, fwd_test = train_test_split(
+        X, y, future_ret, test_size=0.2, random_state=random_state, stratify=y
     )
     # Validation split for threshold tuning (and tuning selection sanity).
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train_full, y_train_full, test_size=0.2, random_state=random_state, stratify=y_train_full
+    X_train, X_val, y_train, y_val, fwd_train, fwd_val = train_test_split(
+        X_train_full, y_train_full, fwd_train_full, test_size=0.2, random_state=random_state, stratify=y_train_full
     )
 
     pos = float(np.sum(y_train_full))
@@ -230,11 +371,25 @@ async def train_xgb_multi(
         y_val_np, base_val_proba, metric="accuracy"
     )
 
-    # Choose the threshold based on what the caller wants to optimize.
-    base_t = base_best_acc_t if optimize_metric == "accuracy" else base_best_f1_t
+    base_best_profit_t, base_val_profit = _best_threshold_profit(
+        base_val_proba, fwd_val.to_numpy(), fee_bps=label_cost_bps
+    )
+    base_best_sharpe_t, base_val_sharpe = _best_threshold_sharpe(
+        base_val_proba, fwd_val.to_numpy(), fee_bps=label_cost_bps
+    )
+    # Choose threshold by requested objective.
+    if optimize_metric == "accuracy":
+        base_t = base_best_acc_t
+    elif optimize_metric == "profit":
+        base_t = base_best_profit_t
+    elif optimize_metric == "sharpe":
+        base_t = base_best_sharpe_t
+    else:
+        base_t = base_best_f1_t
 
     base_proba = baseline_model.predict_proba(X_test)[:, 1]
     base_pred = (base_proba >= base_t).astype(int)
+    base_trade = _trade_metrics_from_preds(base_pred, fwd_test.to_numpy(), fee_bps=label_cost_bps)
     baseline_metrics = {
         "auc": float(roc_auc_score(y_test, base_proba)),
         "accuracy": float(accuracy_score(y_test, base_pred)),
@@ -244,6 +399,9 @@ async def train_xgb_multi(
         "threshold": float(base_t),
         "val_f1": float(base_val_f1),
         "val_accuracy": float(base_val_acc),
+        "val_profit": float(base_val_profit),
+        "val_sharpe": float(base_val_sharpe),
+        **base_trade,
     }
 
     chosen_model = baseline_model
@@ -303,11 +461,25 @@ async def train_xgb_multi(
         tuned_best_acc_t, tuned_val_acc = _best_threshold_metric(
             y_val_np, tuned_val_proba, metric="accuracy"
         )
+        tuned_best_profit_t, tuned_val_profit = _best_threshold_profit(
+            tuned_val_proba, fwd_val.to_numpy(), fee_bps=label_cost_bps
+        )
+        tuned_best_sharpe_t, tuned_val_sharpe = _best_threshold_sharpe(
+            tuned_val_proba, fwd_val.to_numpy(), fee_bps=label_cost_bps
+        )
 
-        tuned_t = tuned_best_acc_t if optimize_metric == "accuracy" else tuned_best_f1_t
+        if optimize_metric == "accuracy":
+            tuned_t = tuned_best_acc_t
+        elif optimize_metric == "profit":
+            tuned_t = tuned_best_profit_t
+        elif optimize_metric == "sharpe":
+            tuned_t = tuned_best_sharpe_t
+        else:
+            tuned_t = tuned_best_f1_t
 
         tuned_proba = tuned_model.predict_proba(X_test)[:, 1]
         tuned_pred = (tuned_proba >= tuned_t).astype(int)
+        tuned_trade = _trade_metrics_from_preds(tuned_pred, fwd_test.to_numpy(), fee_bps=label_cost_bps)
         tuned_metrics = {
             "auc": float(roc_auc_score(y_test, tuned_proba)),
             "accuracy": float(accuracy_score(y_test, tuned_pred)),
@@ -317,6 +489,9 @@ async def train_xgb_multi(
             "threshold": float(tuned_t),
             "val_f1": float(tuned_val_f1),
             "val_accuracy": float(tuned_val_acc),
+            "val_profit": float(tuned_val_profit),
+            "val_sharpe": float(tuned_val_sharpe),
+            **tuned_trade,
         }
 
         tuning_details = {
@@ -331,6 +506,16 @@ async def train_xgb_multi(
             better = (tuned_metrics["accuracy"] > baseline_metrics["accuracy"]) or (
                 tuned_metrics["accuracy"] == baseline_metrics["accuracy"]
                 and tuned_metrics["f1"] > baseline_metrics["f1"]
+            )
+        elif optimize_metric == "profit":
+            better = (tuned_metrics["gross_pnl"] > baseline_metrics["gross_pnl"]) or (
+                tuned_metrics["gross_pnl"] == baseline_metrics["gross_pnl"]
+                and tuned_metrics["max_drawdown_like"] >= baseline_metrics["max_drawdown_like"]
+            )
+        elif optimize_metric == "sharpe":
+            better = (tuned_metrics["val_sharpe"] > baseline_metrics["val_sharpe"]) or (
+                tuned_metrics["val_sharpe"] == baseline_metrics["val_sharpe"]
+                and tuned_metrics["gross_pnl"] >= baseline_metrics["gross_pnl"]
             )
         elif optimize_metric == "f1":
             better = (tuned_metrics["f1"] > baseline_metrics["f1"]) or (
@@ -350,6 +535,12 @@ async def train_xgb_multi(
             chosen_metrics = tuned_metrics
             selected = "tuned"
 
+    wf_metrics = _walk_forward_profit_score(
+        X_train_full,
+        y_train_full,
+        fwd_train_full,
+        chosen_params,
+    )
     final_metrics = {
         **chosen_metrics,
         "n_samples": int(len(data)),
@@ -359,6 +550,11 @@ async def train_xgb_multi(
         "dataset_path": str(csv_path),
         "pos_rate_test": pos_rate_test,
         "majority_accuracy": majority_accuracy,
+        "label_method": label_method,
+        "label_cost_bps": label_cost_bps,
+        "label_vol_mult": label_vol_mult,
+        "label_pt_sl_mult": label_pt_sl_mult,
+        **wf_metrics,
     }
     if tuning_details is not None:
         final_metrics["tuning"] = tuning_details

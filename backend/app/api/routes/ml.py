@@ -28,12 +28,16 @@ class TrainRequest(BaseModel):
   limit_per_symbol: int = 750
   tune: bool = False
   tune_trials: int = 25
-  optimize_metric: Literal["roc_auc", "accuracy", "f1"] = "roc_auc"
+  optimize_metric: Literal["roc_auc", "accuracy", "f1", "profit", "sharpe"] = "roc_auc"
   # Controls how the y-label is defined: y=1 if future return > label_threshold.
   # Increasing label_threshold and/or label_horizon makes the task easier
   # (higher accuracy is possible) but changes what “BUY” corresponds to.
   label_horizon: int = 1
   label_threshold: float = 0.0
+  label_method: Literal["simple", "vol_cost", "triple_barrier"] = "vol_cost"
+  label_cost_bps: float = 4.0
+  label_vol_mult: float = 0.35
+  label_pt_sl_mult: float = 1.2
   # Strong-data training knobs.
   sentiment_post_limit: int = 200
   sentiment_required: bool = False
@@ -91,6 +95,10 @@ async def start_train_xgb(req: TrainRequest, bg: BackgroundTasks):
         optimize_metric=req.optimize_metric,
         label_horizon=req.label_horizon,
         label_threshold=req.label_threshold,
+        label_method=req.label_method,
+        label_cost_bps=req.label_cost_bps,
+        label_vol_mult=req.label_vol_mult,
+        label_pt_sl_mult=req.label_pt_sl_mult,
         sentiment_post_limit=req.sentiment_post_limit,
         sentiment_required=req.sentiment_required,
         min_sentiment_coverage=req.min_sentiment_coverage,

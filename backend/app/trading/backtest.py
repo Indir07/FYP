@@ -85,6 +85,7 @@ def backtest_xgb_long_only(
     stop_loss_bps: float = 0.0,
     take_profit_bps: float = 0.0,
     trailing_stop_bps: float = 0.0,
+    max_drawdown_limit: float = 0.05,
 ) -> BacktestResult:
     """
     Long-only backtest:
@@ -123,6 +124,7 @@ def backtest_xgb_long_only(
     fee_rate = fee_bps / 10_000.0
 
     peak_price = 0.0
+    halted = False
 
     for i in range(len(df)):
         ts = df["ts"].iloc[i]
@@ -130,6 +132,21 @@ def backtest_xgb_long_only(
 
         # Mark-to-market equity
         equity[i] = cash + position_qty * price
+        # Hard risk brake: stop simulation when drawdown breaches limit.
+        # WHY: protects against prolonged model drift on bad symbols.
+        peak_equity = float(np.max(equity[: i + 1]))
+        if peak_equity > 0:
+            dd_now = (equity[i] - peak_equity) / peak_equity
+            if max_drawdown_limit > 0 and dd_now <= -float(max_drawdown_limit):
+                halted = True
+                if position_qty > 0.0:
+                    notional = position_qty * price
+                    fee = fee_rate * notional
+                    cash += notional - fee
+                    position_qty = 0.0
+                    entry_price = 0.0
+                equity[i:] = cash
+                break
 
         if i < start_i:
             continue
@@ -256,5 +273,7 @@ def backtest_xgb_long_only(
         equity[-1] = cash
 
     metrics = _equity_metrics(equity, periods_per_year=_periods_per_year(interval))
+    metrics["halted_on_max_dd"] = halted
+    metrics["max_drawdown_limit"] = float(max_drawdown_limit)
     return BacktestResult(symbol=symbol, interval=interval, metrics=metrics, trades=trades[-200:])
 
