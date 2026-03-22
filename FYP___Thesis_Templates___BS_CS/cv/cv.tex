@@ -1,0 +1,51 @@
+\chapter*{Curriculum Vit\ae}
+\addcontentsline{toc}{chapter}{Curriculum Vit\ae}
+\setheader{Curriculum Vit\ae}
+
+%% Print the full name of the author.
+\makeatletter
+\authors{\@firstname\ {\titleshape\@lastname}}
+\makeatother
+
+\noindent
+\begin{tabular}{p{4\parindent}l}
+    00-00-0000 & Born in Hyderabad, Pakistan.
+\end{tabular}
+
+\section*{Education}
+
+\begin{tabular}{p{4\parindent}l}
+    0000--0000 & Grammar School \\
+    & Name of the Primary School (0000--0000)\\
+    & Name of the Secondary School (0000--0000) \\
+    \\
+    2002--2006 & Undergraduate in Mathematics \& Physics \\
+    & Name of the University \\
+    \\
+    2015 & PhD.\ Physics \\
+    & Name of the University \\
+    &
+    %% The width of the second column is the width of the page, minus the width
+    %% of the first column (4\parindent) minus four times the separation between
+    %% the start of the column and its contents.
+    \begin{minipage}{\textwidth-4\parindent-4\tabcolsep}
+        %% We divide the minipage 20/80.
+        \begin{tabular}{@{}p{0.2\linewidth}@{}p{0.8\linewidth-\tabcolsep}}
+            \textit{Thesis:} & Thesis Title \\
+            \textit{Promotor:} & Prof.\ dr.\ A.\ Heemink
+        \end{tabular}
+    \end{minipage}
+\end{tabular}
+
+\section*{Awards}
+
+\begin{tabular}{p{4\parindent}l}
+    2006 & Prize \\
+    \\
+    2009 & NWO Scholar, DISC Membership \\
+    \\
+    2020 & CWI Grant \\
+    \\
+    0000 & Medal
+\end{tabular}
+

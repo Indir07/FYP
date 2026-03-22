@@ -1,11 +1,15 @@
 # CryptoVolt backend
 
+For full-stack setup (frontend, env vars, Docker), see the **[repo root `README.md`](../README.md)**.
+
 ## Run (Windows PowerShell)
 
 ```powershell
-cd D:\CryptoVolt
-.\backend\.venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
+cd path\to\CryptoVolt\backend
+.\.venv\Scripts\python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+Or from repo root: `.\scripts\run-backend-local.ps1`
 
 Then open:
 - API docs: `http://localhost:8000/docs`

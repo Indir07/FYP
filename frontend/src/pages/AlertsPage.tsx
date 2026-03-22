@@ -8,7 +8,9 @@ export function AlertsPage() {
     queryFn: async () => {
       const res = await fetch(apiUrl('/api/alerts/recent?limit=50'))
       if (!res.ok) throw new Error('Failed to fetch alerts')
-      return res.json() as Promise<{ alerts: Array<{ ts: string; type: string; message: string }> }>
+      return res.json() as Promise<{
+        alerts: Array<{ ts: string; type: string; message: string; discord_sent?: boolean }>
+      }>
     },
     refetchInterval: 3000,
   })
@@ -21,7 +23,8 @@ export function AlertsPage() {
         <div>
           <div className="cv-h1">Alerts & Notifications</div>
           <div className="cv-sub">
-            UC-04. Alerts are delivered via Discord + stored for audit and reproducibility.
+            UC-04. Alerts are stored in the database and optionally sent to Discord when{' '}
+            <code>DISCORD_WEBHOOK_URL</code> is set.
           </div>
         </div>
         <div className="cv-row">
@@ -58,19 +61,19 @@ export function AlertsPage() {
             <tbody>
               {alertsQ.isLoading ? (
                 <tr>
-                  <td colSpan={3} className="cv-muted">
+                  <td colSpan={4} className="cv-muted">
                     Loading…
                   </td>
                 </tr>
               ) : alertsQ.isError ? (
                 <tr>
-                  <td colSpan={3} className="cv-muted">
+                  <td colSpan={4} className="cv-muted">
                     Backend not running?
                   </td>
                 </tr>
               ) : alerts.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="cv-muted">
+                  <td colSpan={4} className="cv-muted">
                     No alerts yet. Start automation or submit a paper trade.
                   </td>
                 </tr>
@@ -82,6 +85,9 @@ export function AlertsPage() {
                       <span className="cv-tag">{a.type}</span>
                     </td>
                     <td>{a.message}</td>
+                    <td className="cv-muted">
+                      {a.discord_sent ? 'sent / attempted' : '—'}
+                    </td>
                   </tr>
                 ))
               )}

@@ -1,4 +1,8 @@
-# React + TypeScript + Vite
+# CryptoVolt frontend (React + TypeScript + Vite)
+
+**Full-stack setup** (env, backend, scripts): see **[`README.md` in the repo root](../README.md)**.
+
+---
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

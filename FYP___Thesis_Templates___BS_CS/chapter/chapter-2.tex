@@ -1,0 +1,45 @@
+\chapter{Literature Review}\label{ch2}
+
+\section{Algorithmic Trading Systems}
+Systematic trading frameworks were developed to reduce emotional bias and improve execution consistency. Traditional rule-based systems rely on indicators such as moving averages, RSI, MACD, Bollinger Bands, and volume signals. While these methods remain useful, their performance in cryptocurrency markets is inconsistent due to frequent shifts between trend-driven and information-driven regimes~\cite{chan2013,elder2014,corbet2019,hudson2021}.
+
+\section{Sentiment Analysis in Financial Markets}
+Financial sentiment research has shown that collective mood can influence market behavior. Social media and news channels provide near-real-time signals that often precede short-term market reactions. Prior work demonstrates significant predictive relationships between sentiment polarity and price movement, especially in cryptocurrency markets~\cite{bollen2011,kraaijeveld2020,bing2021,abraham2018}.
+
+\section{Machine Learning for Trading Signals}
+XGBoost and LSTM are widely used in financial prediction because they capture non-linear and temporal patterns more effectively than linear models. Yet purely data-driven models can degrade under distribution shifts when market behavior changes due to external events~\cite{chen2016,fischer2018,nelson2017,hochreiter1997}.
+
+\section{Hybrid Decision Architectures}
+Hybrid systems combine interpretable rules with adaptive model outputs. Such systems typically achieve stronger robustness across changing market conditions. Recent work also highlights sentiment-informed risk controls as an effective way to reduce drawdowns during high-volatility information events~\cite{aldridge2017,li2022}.
+
+\section{Identified Gaps in Existing Work}
+Three gaps motivate this thesis:
+\begin{enumerate}
+	\item Sentiment is often treated as an auxiliary feature rather than an execution-level control.
+	\item Reproducibility is weak in many studies due to non-archived raw sentiment data and opaque experiment settings.
+	\item Live validation is frequently missing, limiting confidence in deployment behavior.
+\end{enumerate}
+
+\section{Platforms and Engineering Context}
+Modern algorithmic stacks are typically delivered as services with clear API boundaries, persistent storage for user and experiment metadata, and separate client applications for monitoring. In academic prototypes, however, components are often stitched together with ad-hoc scripts, making it difficult for reviewers to replicate results. CryptoVolt deliberately adopts a conventional three-tier style---web frontend, REST API, relational database---so that the research contribution (hybrid decision logic and sentiment veto) is not confounded with idiosyncratic infrastructure choices. This design choice also aligns with how production trading systems are structured, where separation of concerns supports auditability and incremental rollout.
+
+\section{Reproducibility in Machine Learning}
+Recent work in machine learning emphasises dataset versioning, fixed random seeds, and artefact tracking. Financial ML adds further requirements: exchange microstructure changes, corporate actions (less relevant for crypto perpetuals), and API rate limits can all affect the data pipeline. The methodology chapter therefore describes not only model families but also how training jobs are triggered, where models are stored on disk, and how the dashboard and optional agent interact with the same API---a minimal but practical reproducibility story suitable for a final-year project.
+
+\begin{table}[ht]
+\centering
+\caption{Summary of related work and positioning of CryptoVolt.}
+\label{ch2:tab1}
+\begin{tabular}{@{}p{3.2cm}p{3.0cm}p{2.6cm}p{4.0cm}@{}}
+\toprule
+\textbf{Study} & \textbf{Approach} & \textbf{Sentiment Role} & \textbf{Limitation} \\
+\midrule
+Bollen et al. (2011) & Twitter mood + stock index & Predictive feature & Equity only; no trading system \\
+Kraaijeveld and De Smedt (2020) & Twitter + Bitcoin returns & Predictive feature & No execution layer; no reproducibility \\
+Fischer and Krauss (2018) & Deep learning on returns & None & No sentiment integration \\
+Li et al. (2022) & News-aware sizing & Risk modifier & No veto architecture \\
+CryptoVolt (this work) & Hybrid rules + XGBoost + LSTM & Structural veto & Paper trading scope \\
+\bottomrule
+\end{tabular}
+\end{table}
+

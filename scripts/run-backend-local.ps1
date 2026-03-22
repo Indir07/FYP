@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Set-Location "D:\CryptoVolt\backend"
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location (Join-Path $root "backend")
 
 if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
   Write-Host "Python venv not found at backend/.venv. Create it first." -ForegroundColor Yellow

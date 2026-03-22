@@ -1,0 +1,103 @@
+% Description: This is a recommended Latex template of the Department of Mathematics and Social Science
+% SIBAU for BSM final year project, which can only be used for academic purposes. 
+% BSM final year project report will be only submitted and accepted in this template. 
+% Note: BSM project report/dissertation/thesis writing in other template be accepted by the
+% department of Mathematics and Social Science, department of computer science, SIBAU.
+% Author: H.A.M.S., Syed, K.Ali
+% Created on: 01 December 2019
+% Update on: 20 January 2020
+% Update on: 25 October 2023
+% Updated on: 03 September 2025
+% Contact: syed.hyderali@iba-suk.edu.pk, khurshed.ali@iba-suk.edu.pk
+% @copyright 2019: This template is strictly not allowed to be published anywhere on the public domains
+% without the permission of the author.
+
+% MAIN DOCUMENT CLASS - Use 'print' option for final printed version (removes colors for b/w printing)
+\documentclass[print]{dissertation} % for printing the final version of Thesis
+%\documentclass[]{dissertation} % Use this line instead for digital/colored version
+%\color{sibau-dark-blue} % Uncomment to set a specific color scheme if needed
+\usepackage{booktabs}
+\usepackage{adjustbox}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+
+
+% PACKAGES - Essential packages for document formatting
+\usepackage[english]{babel} % Language support
+\usepackage{csquotes} % Improved quotation handling
+\usepackage[backend=biber, style=numeric]{biblatex} % Bibliography management with biber backend
+\addbibresource{dissertation.bib} % Path to your bibliography file
+%\usepackage{hyperref} % Creates clickable links in PDF
+
+% CAPTION FORMATTING - Centers all figure and table captions
+\captionsetup{justification=centering} % Remove this line if you prefer left-justified captions
+
+%%%%%%%%%%%%%%%%%%%%%% begin document %%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+% THESIS METADATA - Fill in your specific information here
+\title[Hands On Approach]{CRYPTOVOLT: AI-POWERED ALGORITHMIC TRADING WITH SENTIMENT ANALYSIS} % Short title in brackets, full title in braces
+
+% AUTHOR INFORMATION - Update with your team's details
+\authorone{Sahil}{Kumar}{023-22-0290} % Author 1: {First Name}{Last Name}{Student ID}
+\authortwo{Indir}{Lal}{053-22-0028} % Author 2
+\authorthree{Muskan}{Kumari}{023-22-0074} % Author 3
+\defencedate{13 {\textsc{APRIL}} 2026} % Date of defense/presentation
+
+% FRONT MATTER - Uses Roman numerals for preliminary pages
+\frontmatter
+
+% TITLE PAGE - Includes the formatted title page
+\include{title/title}
+
+% DEDICATION PAGE (Optional) - Personal dedication or quote
+\dedication{\epigraph{For every student who sits at the intersection of finance and computer science\\and dares to build something that has never been built before.}{}}
+
+% SUMMARY/ABSTRACT - Include your abstract
+\include{summary/summary}
+%\include{preface/preface} % Uncomment if you have a preface
+
+% ACKNOWLEDGEMENTS (Optional) - Thank people who helped you
+\include{acks/acks} 
+
+% LISTS OF FIGURES, TABLES, AND TABLE OF CONTENTS
+\tableofcontents % Generates table of contents
+\listoffigures % Generates list of figures
+\listoftables  % Generates list of tables
+
+
+% MAIN MATTER - Uses Arabic numerals for chapter pages
+\mainmatter
+
+% THUMB INDICES - Enables chapter thumb indices in margin
+\thumbtrue
+
+% CHAPTERS - Include your main content chapters
+% Update these filenames to match your actual chapter files
+\include{chapter/chapter-1}
+\include{chapter/chapter-2}
+\include{chapter/chapter-3}
+\include{chapter/chapter-4}
+\include{chapter/chapter-5}
+\include{chapter/chapter-6}
+
+% APPENDICES - Uses letter numbering for appendices
+\appendix
+\renewcommand{\chaptername}{Appendix} % Changes chapter name to "Appendix"
+\input{appendix/appendix-a} % API reference (CryptoVolt)
+%\input{appendix/appendix-b} % Include Appendix B
+
+% REFERENCES/BIBLIOGRAPHY SECTION
+\printbibliography % Generates bibliography from dissertation.bib
+\addcontentsline{toc}{chapter}{Bibliography} % Add Biblograpy in the table of contents
+
+% TURN OFF THUMB INDICES for unnumbered sections
+\thumbfalse
+
+% OPTIONAL SECTIONS - Uncomment if needed
+%\include{cv/cv} % Curriculum Vitae
+%\include{publications/publications} % List of publications
+
+\end{document}
+%%%%%%%%%%%%%%%%%%%%%% end document %%%%%%%%%%%%%%%%%%%%%%%%%

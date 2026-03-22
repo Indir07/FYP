@@ -1,0 +1,41 @@
+\chapter{Introduction}\label{chapter1}
+
+\section{Background and Motivation}
+Cryptocurrency markets have grown into a continuously operating and highly reactive financial environment. Unlike traditional equity markets, cryptocurrency prices are strongly influenced by narratives, social media activity, and community sentiment in addition to technical patterns and macro trends. A single policy update, exchange incident, or coordinated online reaction can trigger significant price movements within hours.
+
+Algorithmic trading was originally introduced to reduce emotional decisions and improve execution consistency. Rule-based systems are fast and disciplined, but they are weak during information-driven events because they only process market structure. Machine learning models improve adaptability but still struggle under sudden distribution shifts caused by external information. CryptoVolt was designed to address this exact gap by combining technical signals, ML prediction, and sentiment-aware risk control in one architecture.
+
+\section{Problem Statement}
+Existing cryptocurrency trading systems generally follow one of two paths: technical indicator automation or machine-learning-based prediction. Both approaches are limited when market direction is driven by information shocks rather than recent price behavior. In those periods, models can produce confident signals without understanding the underlying informational context.
+
+This thesis addresses that limitation by introducing a hybrid trading framework where sentiment is not merely a passive feature but a structural risk control component that can modify or veto trade execution.
+
+\section{Research Objectives}
+The work is organized around the following objectives:
+\begin{enumerate}
+    \item Design and implement a hybrid decision framework that fuses technical indicators, XGBoost, and LSTM outputs with multi-source sentiment analysis.
+    \item Demonstrate measurable gains in risk-adjusted performance relative to rule-only and ML-augmented baselines.
+    \item Build a reproducible evaluation pipeline where datasets, model versions, and experiment configurations are traceable and version-controlled.
+\end{enumerate}
+
+\section{Scope and Limitations}
+CryptoVolt is scoped to Binance Futures-style perpetual contracts and runs in paper trading mode by default. The prototype focuses on BTC/USDT and is evaluated using historical backtesting plus a bounded live paper-trading window. Sentiment sources in this version are primarily English-language Reddit and financial news feeds. A multi-exchange, multi-lingual production system is beyond this thesis scope.
+
+\section{Contributions}
+This thesis makes the following practical and scientific contributions:
+\begin{itemize}
+  \item A \textbf{reference implementation} of a sentiment-aware hybrid trading stack using mainstream open-source components (FastAPI, React, XGBoost, PyTorch, VADER) that can be inspected, extended, and reproduced by other researchers.
+  \item A \textbf{clear separation of concerns} between data ingestion, feature construction, model training, hybrid decision logic, paper execution, and operator interfaces—reducing the risk that experimental results depend on undocumented scripts.
+  \item \textbf{Empirical reporting} that combines backtesting summaries, classifier metrics, paper-trading statistics, and veto-event analysis, making limitations explicit rather than hiding them behind a single headline number.
+\end{itemize}
+
+\section{Ethical and Regulatory Considerations}
+Automated trading systems can amplify losses as well as gains. This work is presented as \emph{research software}; it is not financial advice, and readers remain responsible for compliance with applicable laws and exchange terms in their jurisdiction. The default emphasis on paper trading reflects a deliberate choice to prioritise safety during experimentation. Sentiment derived from public forums may contain biased or manipulative content; the veto mechanism is a risk-control heuristic, not a guarantee against adverse outcomes.
+
+\section{Document Structure}
+Chapter~\ref{ch2} reviews related work in algorithmic trading, sentiment analysis, ML forecasting, and hybrid architectures. Chapter~\ref{ch3} details the research methodology and system design. Chapter~\ref{ch4} presents implementation details across data, modeling, execution, and interface layers. Chapter~\ref{ch5} reports quantitative results and analysis. Chapter~\ref{ch6} concludes the thesis and outlines future directions.
+
+\section{Reading Guide}
+Readers primarily interested in software architecture may focus on Chapters~\ref{ch3} and~\ref{ch4}, which include diagrams for components, data flow, and representative user-interface screenshots. Readers focused on empirical claims may begin with Chapter~\ref{ch5} and return to methodology sections as needed. The appendix records API prefixes and configuration variable names for reproducibility. Throughout, technical jargon is introduced progressively: unfamiliar readers should consult the glossary-style entries in Appendix~A where terms first appear in bold in tables.
+
+Figures in this document are numbered by chapter (for example, Figure~4.2 refers to the second figure in Chapter~4). Tables that summarise configuration or evaluation metrics use consistent column headers so that results can be compared across sections without rereading the full narrative. When a screenshot depicts a web interface, it is intended to show layout and information hierarchy rather than pixel-perfect branding; the underlying implementation may evolve while preserving the same functional areas (market overview, signals, trades, settings, and model management).

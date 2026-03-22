@@ -1,0 +1,38 @@
+\chapter{Conclusion and Future Work}\label{ch6}
+
+\section{Summary of Contributions}
+This thesis presented CryptoVolt, a hybrid AI-powered algorithmic trading system that integrates technical indicators, machine learning models, and sentiment-aware risk controls. The key architectural contribution is the sentiment veto mechanism, where sentiment has execution-level authority rather than being used only as a weak feature.
+
+The empirical results showed improvement from baseline to full system in both Sharpe ratio and drawdown control. The evaluation design also emphasized reproducibility through versioned data archives, model registry entries, and traceable experiment configurations.
+
+\section{Lessons from Development}
+Three implementation lessons were especially important:
+\begin{enumerate}
+	\item Curated sentiment quality matters more than raw sentiment volume.
+	\item Realistic execution assumptions (bid/ask and slippage) are essential for honest backtesting.
+	\item Modular service architecture significantly improves maintainability during iterative research development.
+\end{enumerate}
+
+\section{Future Work}
+Recommended future directions include:
+\begin{enumerate}
+	\item Multi-pair evaluation beyond BTC/USDT (for example ETH/USDT and SOL/USDT).
+	\item Expanded multilingual sentiment ingestion and richer domain-tuned language models.
+	\item Non-linear or learned fusion policies while preserving risk-control interpretability.
+	\item Extended live paper-trading validation over six to twelve months.
+\end{enumerate}
+
+\section{Deployment and Maintenance Checklist}
+Handing the system to a future maintainer requires more than source code. The following checklist summarises practical steps inferred from the implementation:
+\begin{itemize}
+	\item \textbf{Secrets:} Rotate \texttt{JWT\_SECRET\_KEY}, Reddit keys, SMTP passwords, and Discord webhooks when team membership changes; never commit \texttt{.env}.
+	\item \textbf{Database:} Schedule automated backups for PostgreSQL in production; verify restore drills on a staging instance.
+	\item \textbf{Model registry:} Keep the on-disk model directory on redundant storage; document which model version is ``active'' for each symbol.
+	\item \textbf{Frontend build:} Pin \texttt{VITE\_API\_BASE\_URL} for production builds and verify CORS origins match deployed hostnames.
+	\item \textbf{Agent fleet:} If developers use the Go agent, distribute updates alongside backend releases and re-run hook installation when paths change.
+\end{itemize}
+
+\section{Closing Remarks}
+CryptoVolt is a reproducible prototype that demonstrates a practical and academically grounded way to incorporate sentiment as a first-class risk control component in automated trading. The framework establishes a strong foundation for future research and real-world refinement.
+
+As a closing note, the team recommends that any reader who deploys similar systems in production pairs this document with the repository's operational runbooks, keeps an incident log for model and data failures, and revisits risk limits whenever market structure changes (for example, fee schedule updates or new listing rules). Documentation and code should evolve together; otherwise, the gap between research intent and operational reality widens silently.

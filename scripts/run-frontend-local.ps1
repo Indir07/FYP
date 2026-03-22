@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Set-Location "D:\CryptoVolt\frontend"
+$root = Split-Path -Parent $PSScriptRoot
+Set-Location (Join-Path $root "frontend")
 
 if (-not (Test-Path ".\node_modules")) {
   Write-Host "node_modules not found. Run: npm install" -ForegroundColor Yellow

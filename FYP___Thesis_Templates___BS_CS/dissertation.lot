@@ -1,0 +1,17 @@
+\babel@toc {english}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces Summary of related work and positioning of CryptoVolt.}}{6}{table.caption.6}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Major technologies in the implemented system.}}{10}{table.caption.10}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces Backtesting performance across configurations.}}{14}{table.caption.15}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces XGBoost classifier evaluation on held-out test set.}}{14}{table.caption.18}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces Paper trading summary over the four-week evaluation period.}}{15}{table.caption.19}%
+\contentsline {table}{\numberline {5.4}{\ignorespaces Sentiment veto event classification.}}{16}{table.caption.20}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {A.1}{\ignorespaces Major \texttt {/api} route groups.}}{21}{table.caption.22}%
+\contentsline {table}{\numberline {A.2}{\ignorespaces Common environment variables (names only; values are deployment-specific).}}{22}{table.caption.23}%
+\contentsfinish 

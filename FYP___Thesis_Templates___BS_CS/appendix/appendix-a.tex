@@ -1,0 +1,80 @@
+\chapter{API and Configuration Reference}\label{appendixA}
+
+This appendix summarises the public API surface and configuration knobs of the CryptoVolt implementation as wired in the repository. Authoritative field-level schemas appear in the interactive OpenAPI documentation served at \texttt{/docs} when the backend is running.
+
+\section{REST API Prefixes}
+
+\begin{table}[ht]
+\centering
+\caption{Major \texttt{/api} route groups.}
+\label{app:tab-api}
+\resizebox{0.98\linewidth}{!}{%
+\begin{tabular}{@{}lp{9.5cm}@{}}
+\toprule
+\textbf{Prefix} & \textbf{Purpose} \\
+\midrule
+\texttt{/api/auth} & Signup, login, OTP email verification, password flows, JWT issuance. \\
+\texttt{/api/coins} & Recommended or filtered coin universes for training and UI defaults. \\
+\texttt{/api/market} & Klines and related market series for charting and features. \\
+\texttt{/api/sentiment} & Aggregated sentiment scores and optional Reddit-backed analysis. \\
+\texttt{/api/trading} & Hybrid trading decision and related controls. \\
+\texttt{/api/paper} & Paper trading positions and history. \\
+\texttt{/api/ml} & Training jobs (e.g.\ XGBoost), job status, model registry, activation. \\
+\texttt{/api/backtest} & Backtest execution and results retrieval. \\
+\texttt{/api/alerts} & Recent alerts and test notifications (e.g.\ Discord). \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\section{Selected Environment Variables}
+
+\begin{table}[ht]
+\centering
+\caption{Common environment variables (names only; values are deployment-specific).}
+\label{app:tab-env}
+\resizebox{0.98\linewidth}{!}{%
+\begin{tabular}{@{}lp{9cm}@{}}
+\toprule
+\textbf{Variable} & \textbf{Role} \\
+\midrule
+\texttt{DATABASE\_URL} & SQLAlchemy connection string (PostgreSQL recommended in production; SQLite for local dev). \\
+\texttt{JWT\_SECRET\_KEY} & Secret for signing JWT access tokens. \\
+\texttt{SMTP\_*} & Outbound email for OTP and password reset. \\
+\texttt{REDDIT\_*} & Reddit API credentials for sentiment ingestion when enabled. \\
+\texttt{DISCORD\_WEBHOOK\_URL} & Optional webhook for operator alerts. \\
+\texttt{CORS\_ORIGINS} & Comma-separated browser origins allowed for credentialed API calls. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\section{Desktop Agent (Optional)}
+
+The agent binary supports \texttt{--config}, \texttt{--enroll}, \texttt{--scan}, \texttt{--upload}, \texttt{--install-hooks}, and \texttt{--log-dir}. Scheduled tasks and Git hooks invoke \texttt{--upload} to forward new analytics to the API without blocking interactive development.
+
+\section{Glossary of Project Terms}
+
+\begin{description}
+\item[Klines] Candlestick series (open, high, low, close, volume) for a symbol and interval.
+\item[Paper trading] Simulated execution without transferring real funds on an exchange.
+\item[Model registry] Directory where trained model binaries and metadata are stored between training and inference.
+\item[Hybrid decision] Combined output of rule-based logic, tree-based models, and optional sequence models, subject to veto.
+\item[Veto] Risk-control branch that can block or alter a proposed action based on sentiment or policy rules.
+\end{description}
+
+\section{Local replication workflow}
+
+This subsection is written for examiners and future students who wish to run the software alongside reading the thesis. It does not replace the repository \texttt{README}, but it explains the \emph{order} in which services are typically started so that screenshots and API examples in the main chapters correspond to a live system.
+
+First, provision a Python environment for the backend and install dependencies from the backend package manifest. Create a database (SQLite is acceptable for a quick smoke test; PostgreSQL matches production assumptions) and apply migrations so that user accounts, model registry metadata, and paper-trading tables exist before the API serves requests.
+
+Second, copy \texttt{.env.example} to \texttt{.env} and fill secrets that your deployment actually uses: at minimum database URL, JWT secret, and CORS origins that include the frontend dev server origin. If sentiment features are required for demonstrations, add Reddit credentials only on machines where policy permits; otherwise, disable those integrations and rely on cached or synthetic sentiment for UI testing.
+
+Third, start the FastAPI application and confirm that \texttt{/docs} loads the interactive OpenAPI UI. This step validates routing, dependency injection, and database connectivity before any long-running training job is launched.
+
+Fourth, in a separate terminal, install frontend dependencies and start the Vite dev server with \texttt{VITE\_API\_BASE\_URL} pointing at the running backend. The dashboard screenshots in Chapter~4 assume this pairing: the browser issues authenticated calls to the API while charts and tables render live data or graceful empty states.
+
+Finally, optional ML workflows (training XGBoost or LSTM exports, registering a model, activating it) should be executed only after the above chain succeeds. Keeping this order avoids confusing errors where the UI appears broken when the root cause is an uninitialized database or a mismatched API base URL.
+
+If any step fails, capture the traceback or HTTP status in your lab notebook; the thesis evaluation sections deliberately separate \emph{implementation completeness} from \emph{market performance}, so a failed local run is still useful evidence for debugging narratives in future work.

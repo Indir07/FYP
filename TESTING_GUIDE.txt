@@ -251,8 +251,9 @@ How to test:
 1. Trigger events via:
    - automation start + a trade execution
    - or any API action that records alert event
-2. Check Discord channel for incoming message.
-3. If no message:
+2. Open the dashboard Alerts page (or GET /api/alerts/recent): rows should persist after backend restart (stored in DB).
+3. Check Discord channel for incoming message.
+4. If no message:
    - verify webhook URL format
    - verify backend container restarted after .env changes:
      docker compose up -d backend

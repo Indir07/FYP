@@ -1,0 +1,257 @@
+\begin{titlepage}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Begin Thesis Title : Page i & ii %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%\begin{center}
+%
+%% Extra whitespace at the top.
+%\vspace*{2\bigskipamount}
+%
+%% Print the title.
+%{\makeatletter
+%\titlestyle\bfseries\LARGE\@title  % Uses the title defined in main document
+%\makeatother}
+%
+%% Print the optional subtitle.
+%{\makeatletter
+%\ifx\@subtitle\undefined\else      % Only prints subtitle if defined
+%    \bigskip
+%    \titlefont\titleshape\Large\@subtitle
+%\fi
+%\makeatother}
+%
+%\end{center}
+%
+%\cleardoublepage
+%\thispagestyle{empty}  % Empty page style removes page numbers
+%%%%%%%%%%%%%%%%%%%%%%%%%%% End Thesis Title : Page i & ii %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Begin Thesis Main : Page iii & iv %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{center}
+
+%% The following lines repeat the previous page exactly for the formal title page
+
+\vspace*{2\bigskipamount}
+
+%% Print the title again.
+{\makeatletter
+\titlestyle\bfseries\LARGE\@title
+\makeatother}
+
+%% Print the optional subtitle again.
+{\makeatletter
+\ifx\@subtitle\undefined\else
+    \bigskip
+    \titlefont\titleshape\Large\@subtitle
+\fi
+\makeatother}
+
+%% Uncomment the following lines to insert a vertically-centered picture into
+%% the title page.
+%\vfill
+%\includegraphics{title}  % Add your own image if needed
+
+\bigskip
+\bigskip
+{\large\scshape{By}}  % Small caps "By" text
+\bigskip
+\bigskip
+
+%% Print the full name of the author.
+\makeatletter
+\begin{center}  
+\begin{tabular}{l r}  % Tabular environment for author names and IDs
+{\titlestyle\bfseries\large\@authoronefirst\ \titlestyle\bfseries\large{\@authoronelast},} & {\titlestyle\bfseries\large Reg. No: \@authoronecms}\\  % Author 1
+{\titlestyle\bfseries\large\@authortwofirst\ \titlestyle\bfseries\large{\@authortwolast},} & {\titlestyle\bfseries\large Reg. No: \@authortwocms}\\  % Author 2
+{\titlestyle\bfseries\large\@authorthreefirst\ \titlestyle\bfseries\large{\@authorthreelast},} & {\titlestyle\bfseries\large Reg. No: \@authorthreecms}  % Author 3
+\end{tabular}
+\end{center}
+\makeatother
+
+\begin{center}
+    \includegraphics[height=2in]{title/logos/sibau}  % University logo - ensure this path is correct
+\end{center}
+
+%% Apart from the names and dates, the following text is dictated by the
+%% promotieregelement.
+\medskip
+{\titlestyle\bfseries\Large{Bachelor's Thesis}}  % Degree type
+\bigskip
+
+\begin{center}
+{\textsc{Submitted in the partial fulfillment of requirements for the degree of Bachelor of Science in Computer Science with specialization in Computer Science}}  % Update if your degree name differs
+\end{center}
+
+
+\bigskip
+\begin{center}
+\titlestyle\bfseries\large{
+Department of Computer Science\\
+Faculty of Science and Information Technology\\
+Sukkur IBA University}  % Department and university information
+\end{center}
+\bigskip
+
+Defended publicly on \makeatletter\@defencedate\makeatother  % Uses defense date from main document
+
+
+
+%% Extra whitespace at the bottom.
+\vspace*{2\bigskipamount}
+
+\end{center}
+
+\vfill
+\cleardoublepage
+\thispagestyle{empty}
+%%%%%%%%%%%%%%%%%%%%%%%%%%% End Thesis Main : Page iii & iv %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Begin Committee Member : Page v & vi %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{center}
+%% Print the title again.
+{\makeatletter
+\titlestyle\bfseries\LARGE\@title
+\makeatother}
+
+%% Print the optional subtitle again.
+{\makeatletter
+\ifx\@subtitle\undefined\else
+    \bigskip
+    \titlefont\titleshape\Large\@subtitle
+\fi
+\makeatother}
+
+\medskip
+{\textsc{By}}%{\large\scshape{By}}  % Small caps "By" text
+\medskip
+
+
+\makeatletter
+\begin{tabular}{l r}  % Author list repeated
+\titlefont\bfseries\textsc\@authoronefirst\ \titlefont\bfseries\textsc{\@authoronelast}, & \titlefont\bfseries\textsc{Reg. No: \@authoronecms}\\
+\titlefont\bfseries\textsc{\@authortwofirst}\ \titlefont\bfseries\textsc{\@authortwolast}, & \titlefont\bfseries\textsc{Reg. No: \@authortwocms}\\
+\titlefont\bfseries\textsc{\@authorthreefirst}\ \titlefont\bfseries\textsc{\@authorthreelast}, & \titlefont\bfseries\textsc{Reg. No: \@authorthreecms}
+\end{tabular}
+\makeatother
+
+\medskip
+\textsc{Submitted to the Department of Computer Science as
+partial fulfillment of the requirement for the award of the degree of}
+
+\medskip
+{\titlestyle\bfseries\large{
+Bachelor's of Science in Computer Science}
+
+\medskip
+{\textsc{From}}
+\medskip
+
+{{\titlestyle\bfseries\large{Sukkur IBA University}}}
+
+\vspace{.2cm}
+\makeatletter\@defencedate\makeatother
+\vspace{.2cm}
+
+{ \small{ Copyright \textcopyright\ 2026 by  % Copyright notice - update year if needed
+\makeatletter
+{\@authoronefirst}, {\@authortwofirst}, {\@authorthreefirst}.  % Author last names
+\makeatother All rights reserved.} }\\
+
+{\small{The author(s) hereby grant permission to Sukkur IBA University to reproduce and distribute publicly paper and electronic copies of this thesis and grant others the right to do so.}}}
+\end{center}
+
+\medskip
+
+%% List the promotors (supervisors).
+\medskip\noindent
+\begin{tabular}{p{8cm}  r}
+\mbox{\emph{Supervisor:}}                   & \\ 
+Dr. Zakria             & \\
+Department of Computer Science, Sukkur IBA University & \hspace{1cm}\rule{3.5cm}{1pt}\\
+\end{tabular}
+\medskip
+
+%% Co-supervisor and Head of Department.
+\noindent
+\begin{tabular}{p{8cm}  r}
+\mbox{\emph{Co-Supervisor:}}                   & \\
+Dr. Faisal Bin Ubaid                                          & \\
+Department of Computer Science, Sukkur IBA University & \hspace{1cm}\rule{3.5cm}{1pt} \\
+\medskip
+
+\mbox{\emph{Head of Department:}} & \\
+Dr. Ghulam Mujtaba Shaikh                      & \\
+Department of Computer Science, Sukkur IBA University & \hspace{1cm}\rule{3.5cm}{1pt} \\
+\medskip
+
+\mbox{\emph{Internal Examiner:}} & \\
+Dr. Raheel A Memon                      & \\
+Department of Computer Science, Sukkur IBA University & \hspace{1cm}\rule{3.5cm}{1pt} \\
+\medskip
+
+\mbox{\emph{Internal Examiner:}} & \\
+Dr. Khurshed Ali                      & \\
+Department of Computer Science, Sukkur IBA University & \hspace{1cm}\rule{3.5cm}{1pt} \\
+\end{tabular}
+
+\medskip
+\begin{center}
+{\small{An electronic version of this dissertation is available at \url{http://repository.suk-iba.edu.pk/}.}}  % Repository URL    
+\end{center}
+
+
+\vfill
+\cleardoublepage
+\thispagestyle{empty}
+%%%%%%%%%%%%%%%%%%%%%%%%%%% End Committee Member : Page v & vi %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%% Begin Declaration : Page vii & viii %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\begin{center}
+{\makeatletter
+\titlestyle\bfseries\LARGE {Declaration}  % Declaration heading
+\makeatother}
+\end{center}
+\bigskip
+\bigskip
+
+\noindent
+I/We, hereby declare that this thesis has been composed solely by myself/us, during the period of my Bachelor's study. I am aware of and understand the university's \& HEC policy on plagiarism and I certify that this thesis is my own work, except where indicated by reference,  and the work presented in it has not been submitted in support of another degree or qualification from this or any other university or institute of learning. If a violation of the university \& HEC policy on research has occurred in this thesis then I shall be liable for punishable action under the rules of the university \& HEC.
+
+\bigskip
+\bigskip
+\bigskip
+\bigskip
+
+\begin{flushleft}
+\makeatletter
+\begin{tabular}{p{5cm} l r}
+\titlefont\bfseries\textsc{\@authoronefirst}\ \titlefont\bfseries\textsc{\@authoronelast}, & \titlefont\bfseries\textsc{Reg. No: \@authoronecms}  & \rule{3cm}{.4pt}\\  % Signature line for author 1
+\end{tabular}
+\makeatother
+\end{flushleft}
+
+\medskip
+\begin{flushleft}
+\makeatletter
+\begin{tabular}{p{5cm} l r}
+\titlefont\bfseries\textsc{\@authortwofirst}\ \titlefont\bfseries\textsc{\@authortwolast}, & \titlefont\bfseries\textsc{Reg. No: \@authortwocms}  & \rule{3cm}{.4pt} \\  % Signature line for author 2
+\end{tabular}
+\makeatother
+\end{flushleft}
+
+\medskip
+\begin{flushleft}
+\makeatletter
+\begin{tabular}{p{5cm} l r}
+\titlefont\bfseries\textsc{\@authorthreefirst}\ \titlefont\bfseries\textsc{\@authorthreelast}, & \titlefont\bfseries\textsc{Reg. No: \@authorthreecms}  & \rule{3cm}{.4pt}  % Signature line for author 3
+\end{tabular}
+\makeatother
+\end{flushleft}
+
+\vfill
+\vfill
+\cleardoublepage
+\thispagestyle{empty}
+%%%%%%%%%%%%%%%%%%%%%%%%%%% End Declaration : Page vii & viii %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+
+\end{titlepage}

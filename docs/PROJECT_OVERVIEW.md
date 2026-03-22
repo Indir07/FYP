@@ -19,7 +19,7 @@ High-level map of the repo for onboarding and operations. **Do not commit secret
 2. **Dashboard** — Binance klines + sentiment score + hybrid trading decision + optional automation (paper).
 3. **ML** — `train_xgb_multi`: paginated klines → features + Reddit/VADER (optional) → labels → XGBoost → `backend/_model_registry/` + metrics CSV in `_datasets/`.
 4. **Inference** — `get_model_for_symbol()` prefers per-symbol model, else active global model.
-5. **Alerts** — In-memory + optional Discord webhook.
+5. **Alerts** — Persisted in `alert_records` (SQLite/Postgres) + optional Discord webhook (`DISCORD_WEBHOOK_URL`); in-memory ring buffer only if DB is unavailable.
 
 ## API surface (`/api/...`)
 

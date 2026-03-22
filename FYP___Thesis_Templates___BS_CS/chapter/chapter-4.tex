@@ -1,0 +1,95 @@
+\chapter{Implementation}\label{ch4}
+
+\section{Technology Stack}
+Table~\ref{ch4:tab-stack} summarises the production stack used in the CryptoVolt repository. The backend is intentionally monolithic inside a single FastAPI application for clarity during research; the frontend is a single-page application built with Vite for fast iteration.
+
+\begin{table}[ht]
+\centering
+\caption{Major technologies in the implemented system.}
+\label{ch4:tab-stack}
+\resizebox{0.98\linewidth}{!}{%
+\begin{tabular}{@{}llp{6.8cm}@{}}
+\toprule
+\textbf{Layer} & \textbf{Technology} & \textbf{Role} \\
+\midrule
+API & Python 3, FastAPI, Uvicorn & REST endpoints, OpenAPI docs, CORS, lifespan hooks \\
+Persistence & SQLAlchemy, SQLite or PostgreSQL & Users, sessions, trading records; \texttt{DATABASE\_URL} selects backend \\
+ML & XGBoost, PyTorch, scikit-learn, pandas, NumPy & Training jobs, inference, metrics \\
+NLP & VADER, PRAW (Reddit) & Sentiment scoring and optional social ingestion \\
+Charts / TA & \texttt{ta}, Recharts (frontend) & Indicators and dashboard candles \\
+Client UI & React 18, TypeScript, Vite & Dashboard, auth flow, API proxy in dev \\
+Edge (optional) & Go agent binary & Local Git scan, queue, upload to API \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\section{Backend Organisation}
+Routers are grouped under \texttt{/api} prefixes: \texttt{auth}, \texttt{coins}, \texttt{market}, \texttt{sentiment}, \texttt{trading}, \texttt{paper}, \texttt{ml}, \texttt{backtest}, and \texttt{alerts}. Shared dependencies include a database session provider and JWT validation for protected routes. Environment variables are loaded from the repository root \texttt{.env} for local runs.
+
+\section{Market and Sentiment Services}
+Klines are retrieved through Binance-compatible service modules and exposed to the dashboard for symbol and interval selection. Sentiment endpoints aggregate text-derived scores; when Reddit credentials are configured, additional posts can inform training or live windows.
+
+\section{Machine Learning Training Pipeline}
+Training is triggered via the ML API (e.g.\ XGBoost multi-symbol jobs). Jobs run asynchronously: the client receives a job identifier and polls status. Completed runs write artefacts into a configurable model registry directory on disk and may emit metrics or dataset exports under \texttt{\_datasets/} for audit.
+
+\section{Hybrid Trading and Paper Trading}
+The trading router exposes a decision endpoint that combines model outputs with rule-based logic; a veto flag and human-readable reason are returned to the UI. Paper trading routes maintain simulated positions without placing real exchange orders, enabling safe experimentation.
+
+\section{Frontend Dashboard}
+The dashboard page loads recommended symbols, fetches klines for charting, and displays sentiment and hybrid decisions. Figure~\ref{ch4:fig-ui} shows a representative layout of the live interface (styling may vary by theme).
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/dashboard-ui}
+\caption{Representative CryptoVolt dashboard view: market chart, sentiment summary, and trading decision panel.}
+\label{ch4:fig-ui}
+\end{figure}
+
+\section{Desktop Agent and Scheduling}
+An optional agent scans configured local directories for Git repositories, runs analysis, deduplicates events by commit hash where applicable, and uploads batches to the API. Install scripts can register OS schedulers (e.g.\ Windows Task Scheduler, launchd, cron) and optional Git \texttt{post-commit} hooks; logs are written alongside the installation directory. Figure~\ref{ch4:fig-agent} illustrates the edge-to-cloud workflow.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{figures/agent-workflow}
+\caption{Edge workflow: developer workstations run the agent; commits and scheduled runs push data to the central API.}
+\label{ch4:fig-agent}
+\end{figure}
+
+\section{Alerting}
+Discord webhooks and in-app alert records (where implemented) notify operators of notable events or test messages. Configuration is via environment variables to avoid hard-coding secrets.
+
+\section{API Documentation and Developer Experience}
+FastAPI automatically exposes an OpenAPI schema and interactive documentation (typically at \texttt{/docs}) so that endpoints, request bodies, and response models can be explored without reading source code. Figure~\ref{ch4:fig-openapi} shows a representative documentation view; the exact layout depends on the browser and FastAPI version.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/openapi-docs-ui}
+\caption{Interactive API documentation (Swagger-style) generated from the FastAPI application.}
+\label{ch4:fig-openapi}
+\end{figure}
+
+\section{Module Interaction}
+Figure~\ref{ch4:fig1} depicts how browser, API, and persistence layers interact during a typical authenticated dashboard request.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  actor/.style={rectangle, draw, rounded corners, minimum width=1.6cm, minimum height=0.55cm},
+  lifeline/.style={rectangle, draw, minimum width=0.15cm, minimum height=3.2cm},
+  msg/.style={-{Stealth[length=1.8mm]}, thick}
+]
+\node[actor] (u) {User};
+\node[actor, right=2.0cm of u] (sp) {SPA};
+\node[actor, right=2.0cm of sp] (api) {API};
+\node[actor, right=2.0cm of api] (db) {DB};
+\draw[msg] ($(u.east)+(0,-0.35)$) -- node[above]{open UI} ($(sp.west)+(0,-0.35)$);
+\draw[msg] ($(sp.east)+(0,-0.65)$) -- node[above]{GET /api/... + JWT} ($(api.west)+(0,-0.65)$);
+\draw[msg] ($(api.east)+(0,-0.95)$) -- node[above]{SQL} ($(db.west)+(0,-0.95)$);
+\draw[msg, dashed] ($(db.west)+(0,-1.35)$) -- ($(api.east)+(0,-1.35)$);
+\draw[msg, dashed] ($(api.west)+(0,-1.65)$) -- ($(sp.east)+(0,-1.65)$);
+\end{tikzpicture}
+\caption{Simplified request path for an authenticated dashboard call (not to scale).}
+\label{ch4:fig1}
+\end{figure}

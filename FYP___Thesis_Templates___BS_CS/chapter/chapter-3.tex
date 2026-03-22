@@ -1,0 +1,106 @@
+\chapter{Research Methodology}\label{ch3}
+
+\section{Research Design}
+This project follows a design science methodology where a functional artifact is built and evaluated to answer the research question. The workflow includes requirements analysis, architecture design, implementation, and multi-stage evaluation.
+
+\section{System Architecture}
+CryptoVolt is implemented as a modular system centred on a REST API. The browser dashboard and optional desktop agent are clients of the same API; persistence and model artefacts live on the server. Figure~\ref{ch3:fig1} summarises the major components and data flows at a level suitable for supervision and replication.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  comp/.style={rectangle, draw, rounded corners, minimum width=2.6cm, minimum height=0.9cm, align=center},
+  store/.style={cylinder, shape border rotate=90, aspect=0.25, draw, minimum height=1.2cm, minimum width=1.4cm},
+  arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+\node[comp] (fe) {React SPA\\(Vite + TS)};
+\node[comp, right=1.8cm of fe] (api) {FastAPI\\REST /api};
+\node[comp, below=1.2cm of api] (ml) {ML layer\\XGBoost / Torch};
+\node[comp, left=1.8cm of ml] (sent) {Sentiment\\VADER + Reddit};
+\node[store, below=0.9cm of ml] (db) {SQL DB};
+\node[comp, left=2.4cm of db] (reg) {Model\\registry};
+\node[comp, right=2.0cm of api] (ex) {Binance-style\\klines API};
+\node[comp, below=0.8cm of fe] (ag) {Optional\\desktop agent};
+\draw[arrow] (fe) -- node[above] {HTTPS} (api);
+\draw[arrow] (ag) -- node[sloped, above] {HTTPS} (api);
+\draw[arrow] (api) -- (ml);
+\draw[arrow] (api) -- (sent);
+\draw[arrow] (ml) -- (db);
+\draw[arrow] (api) -- (db);
+\draw[arrow] (ml) -- (reg);
+\draw[arrow] (sent) -- (ex);
+\end{tikzpicture}
+\caption{High-level system architecture of CryptoVolt: single API serves the dashboard and optional agent; models and state persist on the server.}
+\label{ch3:fig1}
+\end{figure}
+
+\section{Data Collection Strategy}
+Market data is collected from Binance-compatible REST endpoints exposed through the backend (klines for charting and feature construction). Sentiment data combines Reddit-derived text (where API credentials are configured) with rule-based scoring (VADER) in analysis windows aligned with training and live inference.
+
+\section{Feature Engineering Pipeline}
+Technical features draw on the \texttt{ta} library and custom statistics over multi-interval klines. Sentiment aggregates include window-level compound scores and labels. Figure~\ref{ch3:fig2} shows how raw inputs move toward model-ready tensors.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={rectangle, draw, minimum height=0.75cm, minimum width=2.4cm, align=center},
+  arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+\node[box] (k) {Klines\\OHLCV};
+\node[box, right=1.0cm of k] (f) {Technical\\features};
+\node[box, right=1.0cm of f] (feat) {Feature\\matrix};
+\node[box, below=1.0cm of k] (t) {Text\\(Reddit)};
+\node[box, right=1.0cm of t] (v) {VADER\\scores};
+\node[box, right=1.0cm of v] (s) {Sentiment\\features};
+\node[box, below=1.0cm of feat, xshift=-1.2cm] (m) {Train / infer};
+\draw[arrow] (k) -- (f);
+\draw[arrow] (f) -- (feat);
+\draw[arrow] (t) -- (v);
+\draw[arrow] (v) -- (s);
+\draw[arrow] (feat) -- (m);
+\draw[arrow] (s) -- (m);
+\end{tikzpicture}
+\caption{Data flow through the feature engineering pipeline: market and sentiment streams merge before training and hybrid inference.}
+\label{ch3:fig2}
+\end{figure}
+
+\section{Machine Learning Models}
+\subsection{XGBoost Classifier}
+The XGBoost model predicts discrete action classes (e.g.\ Buy, Sell, Hold) using engineered technical and sentiment features. Hyperparameters may be tuned via the training API when enabled.
+
+\subsection{LSTM Forecaster}
+Sequence models (implemented with PyTorch in the project stack) consume short windows of recent market-derived series to provide a directional signal complementary to tree-based models.
+
+\section{Hybrid Decision Engine}
+Signals from rule logic, gradient boosting, and sequence modelling are fused with configurable weights. A sentiment-informed veto can block or soften execution when informational risk is elevated. Figure~\ref{ch3:fig3} illustrates the fusion and veto conceptually.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  inp/.style={rectangle, draw, rounded corners, minimum width=1.8cm, minimum height=0.65cm},
+  sum/.style={circle, draw, minimum size=0.9cm},
+  veto/.style={rectangle, draw, dashed, minimum width=2.8cm, minimum height=1.0cm, align=center},
+  arrow/.style={-{Stealth[length=2mm]}, thick}
+]
+\node[inp] (r) {Rules};
+\node[inp, below=0.45cm of r] (x) {XGB};
+\node[inp, below=0.45cm of x] (l) {LSTM};
+\node[sum, right=1.4cm of x] (plus) {$+$};
+\node[inp, right=1.6cm of plus] (out) {Proposal};
+\node[veto, below=1.0cm of plus] (v) {Sentiment veto\\(risk check)};
+\draw[arrow] (r) -- (plus);
+\draw[arrow] (x) -- (plus);
+\draw[arrow] (l) -- (plus);
+\draw[arrow] (plus) -- (out);
+\draw[arrow] (plus) -- (v);
+\draw[arrow] (v) -| node[near start, left] {block / allow} (out);
+\end{tikzpicture}
+\caption{Hybrid decision engine: fused model outputs produce a proposal; the sentiment veto can intervene before execution (paper trading).}
+\label{ch3:fig3}
+\end{figure}
+
+\section{Evaluation Methodology}
+Evaluation uses: (i) extended historical backtesting, (ii) bounded live paper-trading validation, and (iii) sensitivity analysis over veto thresholds and fusion weights. Metrics emphasise Sharpe ratio, maximum drawdown, and veto classification accuracy.

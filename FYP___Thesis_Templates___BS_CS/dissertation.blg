@@ -1,0 +1,15 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'dissertation.blg'
+[110] biber-MSWIN64:342> INFO - === 
+[146] Biber.pm:421> INFO - Reading 'dissertation.bcf'
+[252] Biber.pm:1002> INFO - Found 14 citekeys in bib section 0
+[266] Biber.pm:4487> INFO - Processing section 0
+[277] Biber.pm:4678> INFO - Looking for bibtex file 'dissertation.bib' for section 0
+[315] bibtex.pm:1713> INFO - LaTeX decoding ...
+[335] bibtex.pm:1519> INFO - Found BibTeX data source 'dissertation.bib'
+[426] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[426] UCollate.pm:68> INFO - Overriding locale 'en-US' defaults 'variable = shifted' with 'variable = non-ignorable'
+[426] Biber.pm:4307> INFO - Sorting list 'nty/global//global/global/global' of type 'entry' with template 'nty' and locale 'en-US'
+[426] Biber.pm:4313> INFO - No sort tailoring available for locale 'en-US'
+[438] bbl.pm:676> INFO - Writing 'dissertation.bbl' with encoding 'UTF-8'
+[445] bbl.pm:779> INFO - Output to dissertation.bbl
