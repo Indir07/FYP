@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Repo-root `.env` (d:\CryptoVolt\.env) — loaded for local `uvicorn` runs.
@@ -35,7 +36,12 @@ def _cors_origins() -> list[str]:
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="CryptoVolt API", version="0.1.0")
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        Base.metadata.create_all(bind=engine)
+        yield
+
+    app = FastAPI(title="CryptoVolt API", version="0.1.0", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
@@ -46,10 +52,6 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(api_router, prefix="/api")
-
-    @app.on_event("startup")
-    def _create_tables():
-        Base.metadata.create_all(bind=engine)
 
     @app.get("/", response_class=HTMLResponse)
     def root_page():

@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
-from fastapi import APIRouter
-from fastapi import BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from app.ml.registry import create_entry, list_entries, save_artifact, set_active
@@ -15,6 +14,22 @@ from app.services.binance_coins import get_recommended_universe, get_top10_famou
 router = APIRouter()
 
 _jobs: dict[str, dict] = {}
+
+
+async def _resolve_train_symbols(req: TrainRequest) -> list[str]:
+  """Resolve trading pair list before starting a background training job."""
+  if req.universe == "recommended":
+    coins = await get_recommended_universe(
+      limit=req.limit,
+      max_price=req.max_price,
+      min_change_24h=req.min_change_24h,
+      min_quote_volume_24h=req.min_quote_volume_24h,
+    )
+    return [c.symbol for c in coins]
+  if req.universe == "top10_famous_growing":
+    coins = await get_top10_famous_growing_universe(limit=min(req.limit, 10))
+    return [c.symbol for c in coins]
+  return [s.strip().upper() for s in req.symbols if s and str(s).strip()]
 
 
 class TrainRequest(BaseModel):
@@ -69,27 +84,20 @@ class ModelListResponse(BaseModel):
 
 @router.post("/train/xgb", response_model=TrainStartResponse)
 async def start_train_xgb(req: TrainRequest, bg: BackgroundTasks):
+  symbols = await _resolve_train_symbols(req)
+  if not symbols:
+    raise HTTPException(
+      status_code=400,
+      detail="No symbols to train. Use universe=recommended or top10_famous_growing, or pass non-empty symbols for universe=custom.",
+    )
+
   job_id = f"job_{uuid.uuid4().hex[:12]}"
   _jobs[job_id] = {"status": "queued", "started_at": None, "ended_at": None, "error": None}
 
   async def run():
     _jobs[job_id]["status"] = "running"
-    _jobs[job_id]["started_at"] = datetime.utcnow()
+    _jobs[job_id]["started_at"] = datetime.now(timezone.utc)
     try:
-      if req.universe == "recommended":
-        coins = await get_recommended_universe(
-          limit=req.limit,
-          max_price=req.max_price,
-          min_change_24h=req.min_change_24h,
-          min_quote_volume_24h=req.min_quote_volume_24h,
-        )
-        symbols = [c.symbol for c in coins]
-      elif req.universe == "top10_famous_growing":
-        coins = await get_top10_famous_growing_universe(limit=min(req.limit, 10))
-        symbols = [c.symbol for c in coins]
-      else:
-        symbols = req.symbols
-
       result = await train_xgb_multi(
         symbols=symbols,
         interval=req.interval,
@@ -125,12 +133,12 @@ async def start_train_xgb(req: TrainRequest, bg: BackgroundTasks):
       set_active(entry.id)
 
       _jobs[job_id]["status"] = "succeeded"
-      _jobs[job_id]["ended_at"] = datetime.utcnow()
+      _jobs[job_id]["ended_at"] = datetime.now(timezone.utc)
       _jobs[job_id]["model_id"] = entry.id
       _jobs[job_id]["metrics"] = entry.metrics
     except Exception as e:
       _jobs[job_id]["status"] = "failed"
-      _jobs[job_id]["ended_at"] = datetime.utcnow()
+      _jobs[job_id]["ended_at"] = datetime.now(timezone.utc)
       _jobs[job_id]["error"] = str(e)
 
   # BackgroundTasks expects sync callable; wrap with asyncio.run
