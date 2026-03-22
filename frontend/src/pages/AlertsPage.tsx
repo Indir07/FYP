@@ -27,9 +27,18 @@ export function AlertsPage() {
             <code>DISCORD_WEBHOOK_URL</code> is set.
           </div>
         </div>
-        <div className="cv-row">
+        <div className="cv-row" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div className="cv-field" style={{ flex: '1 1 280px', maxWidth: 480 }}>
+            <span className="cv-label">Test notification</span>
+            <span className="cv-hint">
+              Writes a row to the <strong>alerts</strong> table and, if <code>DISCORD_WEBHOOK_URL</code> is set in
+              <code>.env</code>, posts a test message to your Discord channel.
+            </span>
+          </div>
           <button
+            type="button"
             className="cv-btn"
+            title="POST /api/alerts/test — requires backend running"
             onClick={async () => {
               await fetch(apiUrl('/api/alerts/test'), {
                 method: 'POST',
@@ -42,7 +51,7 @@ export function AlertsPage() {
               })
             }}
           >
-            Test Discord webhook
+            Send test alert (DB + Discord)
           </button>
         </div>
       </div>
@@ -53,9 +62,10 @@ export function AlertsPage() {
           <table className="cv-table">
             <thead>
               <tr>
-                <th align="left">Time</th>
+                <th align="left">Time (UTC)</th>
                 <th align="left">Type</th>
                 <th align="left">Message</th>
+                <th align="left">Discord</th>
               </tr>
             </thead>
             <tbody>

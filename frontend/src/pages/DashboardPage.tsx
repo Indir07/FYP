@@ -351,6 +351,17 @@ export function DashboardPage() {
         </div>
       ) : null}
 
+      <div className="cv-card">
+        <div className="cv-cardTitle">How this page works</div>
+        <div className="cv-muted" style={{ marginTop: 8, lineHeight: 1.5 }}>
+          <strong>Refresh</strong> loads latest 1m candles and sentiment, then asks the backend for a hybrid{' '}
+          <strong>BUY / SELL / HOLD</strong> decision. <strong>Start automation</strong> runs paper-trading logic on
+          the server with fixed defaults (qty, stops, probability thresholds) — tune those in{' '}
+          <strong>Backtesting</strong> first, then adjust <code>backend/app/api/routes/trading.py</code> if you
+          need live automation to match. This UI does not expose every automation parameter yet.
+        </div>
+      </div>
+
       <div className="cv-grid">
         <div className="cv-card">
           <div className="cv-cardTitle">Symbol</div>

@@ -230,38 +230,65 @@ export function ModelsPage() {
             UC-06. Train models on top-10 famous, liquid, and growth-focused coins and activate a version.
           </div>
         </div>
-        <div className="cv-row">
-          <button
-            className="cv-btn"
-            onClick={async () => {
-              try {
-                const r = await startTrainXgbRecommended()
-                setJobId(r.job_id)
-              } catch (e) {
-                alert('Failed to start training (is backend running?)')
-              }
-            }}
-          >
-            Train + Auto-tune (recommended)
-          </button>
-          <button
-            className="cv-btn cv-btnPrimary"
-            onClick={async () => {
-              if (!selectedModelId) {
-                alert('Select a model first.')
-                return
-              }
-              const res = await fetch(apiUrl('/api/ml/models/activate'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model_id: selectedModelId }),
-              })
-              if (!res.ok) throw new Error('Failed to activate model')
-              // modelsQ refetches automatically (refetchInterval=5000).
-            }}
-          >
-            Activate selected
-          </button>
+      </div>
+
+      <div className="cv-card">
+        <div className="cv-cardTitle">Actions</div>
+        <div className="cv-muted" style={{ marginTop: 6, lineHeight: 1.45 }}>
+          Training uses a <strong>fixed payload</strong> in code (universe, intervals, tuning trials). Requires
+          backend + optional <code>REDDIT_*</code> for sentiment features. Activation picks which model backtesting
+          and trading load.
+        </div>
+        <div className="cv-row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
+          <div className="cv-field" style={{ flex: '1 1 220px' }}>
+            <span className="cv-label">Start training job</span>
+            <span className="cv-hint">
+              Queues XGB training + hyperparameter search. Watch status below. Can take a long time and heavy CPU.
+            </span>
+            <button
+              type="button"
+              className="cv-btn"
+              style={{ marginTop: 6 }}
+              title="POST /api/ml/train/xgb with recommended universe"
+              onClick={async () => {
+                try {
+                  const r = await startTrainXgbRecommended()
+                  setJobId(r.job_id)
+                } catch (e) {
+                  alert('Failed to start training (is backend running?)')
+                }
+              }}
+            >
+              Train + auto-tune (recommended)
+            </button>
+          </div>
+          <div className="cv-field" style={{ flex: '1 1 220px' }}>
+            <span className="cv-label">Set active model</span>
+            <span className="cv-hint">
+              Click a row in the registry first. Active model is used for decisions and backtests for matching
+              symbols.
+            </span>
+            <button
+              type="button"
+              className="cv-btn cv-btnPrimary"
+              style={{ marginTop: 6 }}
+              title="POST /api/ml/models/activate"
+              onClick={async () => {
+                if (!selectedModelId) {
+                  alert('Select a model first.')
+                  return
+                }
+                const res = await fetch(apiUrl('/api/ml/models/activate'), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ model_id: selectedModelId }),
+                })
+                if (!res.ok) throw new Error('Failed to activate model')
+              }}
+            >
+              Activate selected model
+            </button>
+          </div>
         </div>
       </div>
 

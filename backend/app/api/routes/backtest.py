@@ -18,7 +18,8 @@ router = APIRouter()
 class BacktestRequest(BaseModel):
     symbol: str
     interval: Literal["1m", "5m", "15m", "1h"] = "1m"
-    limit: int = Field(default=300, ge=50, le=2000)
+    # Binance klines are paginated server-side (see fetch_klines); large limits OK.
+    limit: int = Field(default=10080, ge=50, le=50_000)
     sentiment_mode: Literal["neutral", "reddit"] = "neutral"
     trade_fraction_cash: float = Field(default=0.5, ge=0.01, le=1.0)
     fee_bps: float = 4.0
