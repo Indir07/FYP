@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Load repo-root `.env` before reading DATABASE_URL (works for uvicorn, scripts, Alembic).
@@ -32,4 +32,30 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_legacy_users_full_name() -> None:
+    """
+    Legacy `users` tables may use `user_id` and omit `full_name` (auth expects both).
+    """
+    insp = inspect(engine)
+    if "users" not in insp.get_table_names():
+        return
+    with engine.begin() as conn:
+        if DATABASE_URL.startswith("postgresql"):
+            conn.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(120) NOT NULL DEFAULT ''"
+                )
+            )
+        else:
+            # SQLite: no IF NOT EXISTS on older versions; ignore duplicate column errors
+            try:
+                conn.execute(
+                    text(
+                        "ALTER TABLE users ADD COLUMN full_name VARCHAR(120) NOT NULL DEFAULT ''"
+                    )
+                )
+            except Exception:
+                pass
 

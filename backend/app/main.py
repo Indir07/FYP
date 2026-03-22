@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import text
 
 from app.api.router import api_router
-from app.db import Base, DATABASE_URL, engine
+from app.db import Base, DATABASE_URL, engine, ensure_legacy_users_full_name
 from app import models  # noqa: F401
 
 
@@ -43,6 +43,7 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         try:
+            ensure_legacy_users_full_name()
             Base.metadata.create_all(bind=engine)
         except Exception:
             logger.exception(
