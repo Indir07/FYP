@@ -43,6 +43,7 @@ Retraining is handled by the `trainer` container, which calls:
 - `RUN_TRAINING_ON_START` (set to `1` to test immediately)
 - `TRAIN_INTERVAL_SECONDS` (default `86400` = 1 day)
 - `TRAIN_REQUEST_LIMIT` / `TRAIN_REQUEST_MAX_PRICE` / etc.
+- 
 
 ## Alerts (in-app + Discord)
 
