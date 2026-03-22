@@ -1,6 +1,9 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+logger = logging.getLogger("cryptovolt")
 
 # Repo-root `.env` (d:\CryptoVolt\.env) — loaded for local `uvicorn` runs.
 # Docker Compose injects env vars directly; this still runs safely if dotenv missing.
@@ -32,14 +35,20 @@ def _cors_origins() -> list[str]:
     if raw:
         return [o.strip() for o in raw.split(",") if o.strip()]
     hosts = ("http://localhost", "http://127.0.0.1")
-    ports = (5173, 5174, 5175, 5176)
+    ports = tuple(range(5173, 5181))  # Vite dev; next free port if busy
     return [f"{h}:{p}" for h in hosts for p in ports]
 
 
 def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        Base.metadata.create_all(bind=engine)
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            logger.exception(
+                "Database init failed (check DATABASE_URL in repo-root .env). "
+                "API will start but /health and DB routes may fail until Postgres credentials are fixed."
+            )
         yield
 
     app = FastAPI(title="CryptoVolt API", version="0.1.0", lifespan=lifespan)
