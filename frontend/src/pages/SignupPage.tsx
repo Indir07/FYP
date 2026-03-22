@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 import { setAuth } from '../lib/auth'
+import { apiUrl, formatApiErrorBody, networkErrorMessage } from '../lib/apiBase'
 
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 12000) {
   const ctrl = new AbortController()
@@ -45,26 +46,31 @@ export function SignupPage() {
     }
     setLoading(true)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/signup/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: fullName.trim(),
-          email: email.trim(),
-          username: username.trim(),
-          password,
-        }),
-      })
+      // Email send can take several seconds over SMTP
+      const res = await fetchWithTimeout(
+        apiUrl('/api/auth/signup/request'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: fullName.trim(),
+            email: email.trim(),
+            username: username.trim(),
+            password,
+          }),
+        },
+        30000,
+      )
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        throw new Error(j?.detail ?? 'Signup failed')
+        throw new Error(formatApiErrorBody(j))
       }
       const j = await res.json().catch(() => ({}))
       setInfo(j?.message ?? 'Verification code sent.')
       setPhase('verify')
       setResendIn(60)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed')
+      setError(networkErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -75,20 +81,20 @@ export function SignupPage() {
     setError(null)
     setLoading(true)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/signup/verify', {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/signup/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), code: code.trim() }),
       })
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        throw new Error(j?.detail ?? 'Verification failed')
+        throw new Error(formatApiErrorBody(j))
       }
       const j = await res.json()
       setAuth(j.token, j.user)
       navigate('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed')
+      setError(networkErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -98,17 +104,17 @@ export function SignupPage() {
     setError(null)
     setInfo(null)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/signup/resend', {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/signup/resend'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(j?.detail ?? 'Failed to resend code')
+      if (!res.ok) throw new Error(formatApiErrorBody(j))
       setInfo(j?.message ?? 'Code resent')
       setResendIn(60)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend code')
+      setError(networkErrorMessage(err))
     }
   }
 

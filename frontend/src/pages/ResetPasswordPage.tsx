@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './AuthPage.css'
+import { apiUrl, formatApiErrorBody, networkErrorMessage } from '../lib/apiBase'
 
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 12000) {
   const ctrl = new AbortController()
@@ -32,16 +33,16 @@ export function ResetPasswordPage() {
     setInfo(null)
     setLoading(true)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/password/forgot', {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/password/forgot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email_or_username: emailOrUsername.trim() }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(j?.detail ?? 'Failed to send reset link')
+      if (!res.ok) throw new Error(formatApiErrorBody(j))
       setInfo(j?.message ?? 'Password reset link sent.')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reset link')
+      setError(networkErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -57,7 +58,7 @@ export function ResetPasswordPage() {
     }
     setLoading(true)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/password/reset', {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/password/reset'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,11 +68,11 @@ export function ResetPasswordPage() {
         }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(j?.detail ?? 'Failed to reset password')
+      if (!res.ok) throw new Error(formatApiErrorBody(j))
       setInfo(j?.message ?? 'Password reset successful.')
       window.setTimeout(() => navigate('/login'), 900)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password')
+      setError(networkErrorMessage(err))
     } finally {
       setLoading(false)
     }

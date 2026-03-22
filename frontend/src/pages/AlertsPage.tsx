@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import './page.css'
+import { apiUrl } from '../lib/apiBase'
 
 export function AlertsPage() {
   const alertsQ = useQuery({
     queryKey: ['alerts', 'recent'],
     queryFn: async () => {
-      const res = await fetch('http://localhost:8000/api/alerts/recent?limit=50')
+      const res = await fetch(apiUrl('/api/alerts/recent?limit=50'))
       if (!res.ok) throw new Error('Failed to fetch alerts')
       return res.json() as Promise<{ alerts: Array<{ ts: string; type: string; message: string }> }>
     },
@@ -27,7 +28,7 @@ export function AlertsPage() {
           <button
             className="cv-btn"
             onClick={async () => {
-              await fetch('http://localhost:8000/api/alerts/test', {
+              await fetch(apiUrl('/api/alerts/test'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

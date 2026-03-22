@@ -58,6 +58,61 @@ FEATURE_COLS = [
 DATASET_DIR = Path(os.getenv("CRYPTOVOLT_DATA_DIR", "D:/CryptoVolt/backend/_datasets"))
 DATASET_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def _balance_binary_df(
+    data: pd.DataFrame,
+    *,
+    balance_per_class: int | None,
+    random_state: int,
+) -> pd.DataFrame:
+    """
+    Balance binary labels so the model is not dominated by the majority class.
+    - balance_per_class=None: use min(#pos, #neg) samples from each class (no oversampling).
+    - balance_per_class=N: sample N rows per class (oversample with replacement if needed).
+    """
+    pos = data[data["y"] == 1]
+    neg = data[data["y"] == 0]
+    if len(pos) == 0 or len(neg) == 0:
+        return data
+    if balance_per_class is not None:
+        n = int(balance_per_class)
+        pos_s = pos.sample(n=n, replace=len(pos) < n, random_state=random_state)
+        neg_s = neg.sample(n=n, replace=len(neg) < n, random_state=random_state)
+    else:
+        n = int(min(len(pos), len(neg)))
+        pos_s = pos.sample(n=n, replace=False, random_state=random_state)
+        neg_s = neg.sample(n=n, replace=False, random_state=random_state)
+    out = pd.concat([pos_s, neg_s], ignore_index=True)
+    return out.sample(frac=1.0, random_state=random_state).reset_index(drop=True)
+
+
+def _xgb_base_params(
+    *,
+    n_train_rows: int,
+    scale_pos_weight: float,
+    random_state: int,
+) -> dict[str, Any]:
+    """Stronger capacity + mild regularization for large tabular datasets."""
+    n_est = int(max(320, min(960, 280 + n_train_rows // 2200)))
+    max_depth = 7 if n_train_rows > 250_000 else 6 if n_train_rows > 80_000 else 5
+    lr = 0.045 if n_train_rows > 400_000 else 0.05
+    min_child = 2 if n_train_rows > 200_000 else 1
+    return {
+        "n_estimators": n_est,
+        "max_depth": max_depth,
+        "learning_rate": lr,
+        "subsample": 0.88,
+        "colsample_bytree": 0.88,
+        "min_child_weight": min_child,
+        "reg_lambda": 2.5 if n_train_rows > 150_000 else 1.0,
+        "gamma": 0.2,
+        "objective": "binary:logistic",
+        "eval_metric": "logloss",
+        "random_state": random_state,
+        "tree_method": "hist",
+        "scale_pos_weight": float(scale_pos_weight),
+    }
+
 def _best_threshold(y_true: np.ndarray, proba: np.ndarray) -> tuple[float, float]:
     """
     Backwards-compatible helper: returns (best_threshold, best_f1) on provided
@@ -174,10 +229,17 @@ def _walk_forward_profit_score(
     y: pd.Series,
     future_ret: pd.Series,
     params: dict[str, Any],
+    *,
+    max_rows: int = 120_000,
 ) -> dict[str, float]:
     """
     Time-ordered validation to estimate out-of-sample trading behavior.
+    For huge datasets, the last `max_rows` rows are used so WF stays fast enough for API jobs.
     """
+    if len(X) > max_rows:
+        X = X.iloc[-max_rows:].copy()
+        y = y.iloc[-max_rows:].copy()
+        future_ret = future_ret.iloc[-max_rows:].copy()
     tscv = TimeSeriesSplit(n_splits=4)
     fold_pnl: list[float] = []
     fold_win: list[float] = []
@@ -239,6 +301,17 @@ async def _load_symbol(
         else:
             feats[col] = feats[col].fillna(default)
 
+    # Reddit posts are sparse vs 1m candles. Carry the last known sentiment forward in time
+    # so the model actually uses news features on most rows (not only exact post minutes).
+    if sentiment_post_limit > 0 and not feats.empty and "ts" in feats.columns:
+        feats = feats.sort_values(["symbol", "ts"]).reset_index(drop=True)
+        for c in ("sent_mean", "sent_pos_share", "sent_neg_share"):
+            if c in feats.columns:
+                feats[c] = feats.groupby("symbol", sort=False)[c].ffill().fillna(0.0)
+        if "sent_count" in feats.columns:
+            # Keep per-minute post counts as-is (0 when no post this minute); do not ffill count.
+            feats["sent_count"] = feats["sent_count"].fillna(0.0)
+
     y, fwd_ret = build_trading_labels(
         feats,
         horizon=label_horizon,
@@ -276,11 +349,13 @@ async def train_xgb_multi(
     label_threshold: float = 0.0,
     label_method: Literal["simple", "vol_cost", "triple_barrier"] = "vol_cost",
     label_cost_bps: float = 4.0,
-    label_vol_mult: float = 0.35,
+    label_vol_mult: float = 0.30,
     label_pt_sl_mult: float = 1.2,
-    sentiment_post_limit: int = 200,
+    sentiment_post_limit: int = 150,
     sentiment_required: bool = False,
     min_sentiment_coverage: float = 0.02,
+    balance_classes: bool = True,
+    balance_per_class: int | None = 600_000,
 ) -> TrainResult:
     # Load data concurrently but limit concurrency to avoid hammering API.
     sem = asyncio.Semaphore(5)
@@ -319,6 +394,15 @@ async def train_xgb_multi(
         raise RuntimeError("No usable symbol data fetched for training.")
 
     data = pd.concat(good, ignore_index=True)
+    rows_before_balance = int(len(data))
+
+    if balance_classes and len(data) > 0:
+        data = _balance_binary_df(
+            data,
+            balance_per_class=balance_per_class,
+            random_state=random_state,
+        )
+    rows_after_balance = int(len(data))
 
     # Persist combined training dataset to CSV for analysis.
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -344,19 +428,11 @@ async def train_xgb_multi(
     pos_rate_test = float(np.mean(y_test))
     majority_accuracy = float(max(pos_rate_test, 1.0 - pos_rate_test))
 
-    base_params = {
-        "n_estimators": 300,
-        "max_depth": 5,
-        "learning_rate": 0.05,
-        "subsample": 0.9,
-        "colsample_bytree": 0.9,
-        "reg_lambda": 1.0,
-        "objective": "binary:logistic",
-        "eval_metric": "logloss",
-        "random_state": random_state,
-        "tree_method": "hist",
-        "scale_pos_weight": float(scale_pos_weight),
-    }
+    base_params = _xgb_base_params(
+        n_train_rows=int(len(X_train)),
+        scale_pos_weight=float(scale_pos_weight),
+        random_state=random_state,
+    )
 
     # Baseline fit + eval (always)
     baseline_model = XGBClassifier(**base_params)
@@ -412,17 +488,31 @@ async def train_xgb_multi(
 
     if tune:
         # Tune on training split only; keep test split strictly held-out.
-        search_space = {
-            "n_estimators": randint(200, 900),
-            "max_depth": randint(3, 9),
-            "learning_rate": uniform(0.01, 0.15),
-            "subsample": uniform(0.6, 0.4),
-            "colsample_bytree": uniform(0.6, 0.4),
-            "min_child_weight": randint(1, 12),
-            "reg_lambda": uniform(0.0, 3.0),
-            "gamma": uniform(0.0, 2.0),
-        }
-        cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_state)
+        ntr = int(len(X_train))
+        if ntr > 200_000:
+            search_space = {
+                "n_estimators": randint(450, 1100),
+                "max_depth": randint(5, 10),
+                "learning_rate": uniform(0.02, 0.09),
+                "subsample": uniform(0.65, 0.3),
+                "colsample_bytree": uniform(0.65, 0.3),
+                "min_child_weight": randint(1, 14),
+                "reg_lambda": uniform(0.5, 5.0),
+                "gamma": uniform(0.0, 2.5),
+            }
+            cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
+        else:
+            search_space = {
+                "n_estimators": randint(200, 900),
+                "max_depth": randint(3, 9),
+                "learning_rate": uniform(0.01, 0.15),
+                "subsample": uniform(0.6, 0.4),
+                "colsample_bytree": uniform(0.6, 0.4),
+                "min_child_weight": randint(1, 12),
+                "reg_lambda": uniform(0.0, 3.0),
+                "gamma": uniform(0.0, 2.0),
+            }
+            cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=random_state)
         estimator = XGBClassifier(**base_params)
 
         def _tune_scorer(estimator_for_fold, X_fold, y_fold):
@@ -544,6 +634,10 @@ async def train_xgb_multi(
     final_metrics = {
         **chosen_metrics,
         "n_samples": int(len(data)),
+        "rows_before_balance": rows_before_balance,
+        "rows_after_balance": rows_after_balance,
+        "balance_classes": balance_classes,
+        "balance_per_class": balance_per_class,
         "n_symbols": int(len(good)),
         "sentiment_coverage_mean": float(np.mean(sentiment_coverages)) if sentiment_coverages else 0.0,
         "selected": selected,

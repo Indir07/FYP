@@ -25,9 +25,10 @@ class TrainRequest(BaseModel):
   min_change_24h: float = 3.0
   min_quote_volume_24h: float = 5_000_000.0
   interval: Literal["1m", "5m", "15m", "1h"] = "1m"
-  limit_per_symbol: int = 750
+  # 10 symbols × 120k ≈ 1.2M rows before balancing (requires paginated Binance fetch).
+  limit_per_symbol: int = 120_000
   tune: bool = False
-  tune_trials: int = 25
+  tune_trials: int = 40
   optimize_metric: Literal["roc_auc", "accuracy", "f1", "profit", "sharpe"] = "roc_auc"
   # Controls how the y-label is defined: y=1 if future return > label_threshold.
   # Increasing label_threshold and/or label_horizon makes the task easier
@@ -38,10 +39,13 @@ class TrainRequest(BaseModel):
   label_cost_bps: float = 4.0
   label_vol_mult: float = 0.35
   label_pt_sl_mult: float = 1.2
-  # Strong-data training knobs.
-  sentiment_post_limit: int = 200
+  # Reddit/VADER sentiment (requires REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in env).
+  # Set >0 to fetch posts; 0 skips Reddit (technical features only).
+  sentiment_post_limit: int = 150
   sentiment_required: bool = False
   min_sentiment_coverage: float = 0.02
+  balance_classes: bool = True
+  balance_per_class: int | None = 600_000
 
 
 class TrainStartResponse(BaseModel):
@@ -102,6 +106,8 @@ async def start_train_xgb(req: TrainRequest, bg: BackgroundTasks):
         sentiment_post_limit=req.sentiment_post_limit,
         sentiment_required=req.sentiment_required,
         min_sentiment_coverage=req.min_sentiment_coverage,
+        balance_classes=req.balance_classes,
+        balance_per_class=req.balance_per_class,
       )
 
       entry, _meta_path = create_entry(

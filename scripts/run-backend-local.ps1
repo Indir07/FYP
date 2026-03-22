@@ -11,4 +11,5 @@ if (-not (Test-Path ".\.venv\Scripts\python.exe")) {
   exit 1
 }
 
-& ".\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --port $Port
+# --host 0.0.0.0: works with http://localhost:8000 and avoids some Windows IPv4/IPv6 quirks
+& ".\.venv\Scripts\python.exe" -m uvicorn app.main:app --reload --host 0.0.0.0 --port $Port

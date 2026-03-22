@@ -23,6 +23,9 @@ frontend/coverage/
 backend/_datasets/
 backend/_model_registry/
 
+# Local SQLite (default DATABASE_URL when Postgres not set)
+backend/cryptovolt.db
+
 # Local dev env / secrets
 .env
 .env.*

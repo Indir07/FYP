@@ -3,7 +3,7 @@ CryptoVolt Full Testing Guidance
 
 Project URLs
 ------------
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:5173 (or 5174/5175 if that port is busy — use the URL Vite prints)
 - Backend API docs (Swagger): http://localhost:8000/docs
 - Backend OpenAPI JSON: http://localhost:8000/openapi.json
 
@@ -59,6 +59,16 @@ Expected:
 - at least one model entry
 - one active model
 
+Each model includes a `metrics` object with training/evaluation output, for example:
+- Classification (hold-out test): auc, accuracy, precision, recall, f1, threshold
+- Validation tuning: val_accuracy, val_f1, val_profit, val_sharpe
+- Simulated trading on test split: trades, gross_pnl, win_rate, avg_trade_return, max_drawdown_like
+- Walk-forward: wf_avg_pnl, wf_avg_win_rate
+- Dataset: n_samples, n_symbols, pos_rate_test, majority_accuracy, label_method, selected, dataset_path
+
+UI: open the app → Models page → **Model evaluation** shows the same fields in tables;
+click a row in "Model registry" to switch models; use "Show full metrics JSON" for the raw object.
+
 C) Backtest run
 - POST /api/backtest/run
 Body example:
@@ -112,6 +122,26 @@ Notes:
 - use false for reliability, then validate sentiment_coverage_mean
 
 
+4b) Large-scale training (~1.2M balanced, default in API)
+---------------------------------------------------------
+The backend now **paginates Binance klines** when `limit_per_symbol` > 1000 (API max per call).
+
+Defaults (POST /api/ml/train/xgb):
+- `limit_per_symbol`: 120000  → 10 top coins ≈ 1.2M raw rows before balancing
+- `balance_classes`: true
+- `balance_per_class`: 600000 → up to **600k samples per class** (~1.2M total), oversampling if needed
+- `optimize_metric`: roc_auc (better ranking on balanced data than accuracy alone)
+- `tune_trials`: 40; large training sets use a wider hyperparameter search
+- **Market + news together:** Binance OHLCV/technical features are always used. **Reddit sentiment**
+  is included when `sentiment_post_limit` > 0 (default **150**). Set `sentiment_post_limit` to **0**
+  to train on technical data only (faster). Requires `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` /
+  `REDDIT_USER_AGENT` in the backend environment; after merge, the last known sentiment is **forward-filled**
+  along the 1m timeline so sparse posts still influence most rows.
+- Check `metrics.sentiment_coverage_mean` after training — should be > 0 when Reddit data matched your window.
+
+Expect long runtimes (many minutes) and large CSVs under `CRYPTOVOLT_DATA_DIR`. The UI “Train + Auto-tune” uses these defaults.
+
+
 5) Activate and Compare Models
 ------------------------------
 1. GET /api/ml/models
@@ -125,16 +155,60 @@ Notes:
    - better cagr/return consistency
 
 
+5b) Model evaluation (registry metrics)
+---------------------------------------
+After training, evaluation is stored on each model as `metrics` (see GET /api/ml/models).
+On the frontend **Models** page, open **“Model evaluation”** — tables group the same fields.
+
+How to read each block:
+
+**Classification (hold-out test)** — Static test split; not used for threshold tuning.
+- **AUC** — Rank quality of predicted probabilities (0.5 = random, 1 = perfect ranking).
+- **Accuracy / Precision / Recall / F1** — Standard scores at the chosen **decision threshold**.
+- **Decision threshold** — Probability cutoff for “buy/long” vs not (tuned on validation when `tune=true`).
+
+**Validation (threshold search)** — Metrics when scanning thresholds on the **validation** slice only.
+- **Val accuracy / Val F1** — Best achievable at some threshold on val data.
+- **Val profit / Val Sharpe** — Simple simulated long-only PnL / Sharpe on val forward returns (fees in `label_cost_bps`).
+
+**Simulated trading (test split)** — Applies the final threshold to **test** predictions + forward returns.
+- **Gross PnL / trades / win rate** — Naive sum of returns where model says long (minus fee); use for relative comparison between runs, not live guarantees.
+- **Max drawdown-like** — Approximate worst peak-to-trough on that simulated equity curve.
+
+**Walk-forward estimate** — Several time-ordered folds; retrains on past, scores future chunk.
+- **WF avg PnL / WF avg win rate** — Less optimistic than a single split; better sanity check for overfitting.
+
+**Dataset & labels**
+- **n_samples / n_symbols** — Scale of training data.
+- **pos_rate_test / majority_accuracy** — Class balance; high accuracy can be misleading if labels are skewed.
+- **label_method** — `simple` | `vol_cost` | `triple_barrier` (trading-aware labels).
+- **selected** — `baseline` vs `tuned` (whether hyperparameter search beat baseline).
+
+**API (same data):**
+  curl -s http://localhost:8000/api/ml/models
+  # Inspect each object: metrics.{auc,f1,val_sharpe,wf_avg_pnl,...}
+
+**UI checklist:**
+1. Models page → confirm **Model evaluation** card lists metrics (not empty).
+2. Click different rows in **Model registry** to compare versions.
+3. Use **Show full metrics JSON** for exact numbers / `tuning` details.
+4. After a job finishes, **Training job** also shows the same evaluation tables.
+
+
 6) Frontend End-to-End Tests
 ----------------------------
 A) Dashboard page (http://localhost:5173)
 - Verify market cards/tables load
 - Verify model status/active model appears
 
-B) Models page
-- Start training from UI
-- Wait for job completion
-- Confirm model appears and activation works
+B) Models page — model evaluation
+- Open http://localhost:5173 → Models
+- Confirm **Model evaluation** section shows tables (after at least one trained model exists)
+- Start training from UI if needed; wait for job **succeeded**
+- Check **Training job** expands with evaluation tables
+- Click registry rows; verify highlighted row matches evaluation block
+- Toggle **Show full metrics JSON** and confirm keys match section 5b
+- POST activate; confirm **Active** tag and that live inference uses this model
 
 C) Backtesting page
 - Test with symbols:

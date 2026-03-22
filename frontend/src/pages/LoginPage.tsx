@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './AuthPage.css'
 import { setAuth } from '../lib/auth'
+import { apiUrl, formatApiErrorBody, networkErrorMessage } from '../lib/apiBase'
 
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 12000) {
   const ctrl = new AbortController()
@@ -32,18 +33,22 @@ export function LoginPage() {
     setInfo(null)
     setLoading(true)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/login/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email_or_username: emailOrUsername.trim(),
-          password,
-          device_label: navigator.userAgent.slice(0, 100),
-        }),
-      })
+      const res = await fetchWithTimeout(
+        apiUrl('/api/auth/login/request'),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email_or_username: emailOrUsername.trim(),
+            password,
+            device_label: navigator.userAgent.slice(0, 100),
+          }),
+        },
+        30000,
+      )
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        throw new Error(j?.detail ?? 'Login failed')
+        throw new Error(formatApiErrorBody(j))
       }
       const j = await res.json()
       setChallengeId(j.challenge_id)
@@ -51,7 +56,7 @@ export function LoginPage() {
       setPhase('verify')
       setResendIn(60)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(networkErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -63,7 +68,7 @@ export function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/login/verify', {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/login/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -73,13 +78,13 @@ export function LoginPage() {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        throw new Error(j?.detail ?? 'Verification failed')
+        throw new Error(formatApiErrorBody(j))
       }
       const j = await res.json()
       setAuth(j.token, j.user)
       navigate('/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed')
+      setError(networkErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -90,17 +95,17 @@ export function LoginPage() {
     setError(null)
     setInfo(null)
     try {
-      const res = await fetchWithTimeout('http://localhost:8000/api/auth/login/resend', {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/login/resend'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ challenge_id: challengeId }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(j?.detail ?? 'Failed to resend code')
+      if (!res.ok) throw new Error(formatApiErrorBody(j))
       setInfo(j?.message ?? 'Code resent')
       setResendIn(60)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend code')
+      setError(networkErrorMessage(err))
     }
   }
 

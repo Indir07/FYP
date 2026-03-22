@@ -32,9 +32,12 @@ TRAIN_MAX_PRICE = _env_float("TRAIN_REQUEST_MAX_PRICE", 0.5)
 TRAIN_MIN_CHANGE_24H = _env_float("TRAIN_REQUEST_MIN_CHANGE_24H", 3.0)
 TRAIN_MIN_QUOTE_VOLUME_24H = _env_float("TRAIN_REQUEST_MIN_QUOTE_VOLUME_24H", 5_000_000.0)
 TRAIN_INTERVAL = os.getenv("TRAIN_REQUEST_INTERVAL", "1m")
-TRAIN_LIMIT_PER_SYMBOL = _env_int("TRAIN_REQUEST_LIMIT_PER_SYMBOL", 750)
+TRAIN_LIMIT_PER_SYMBOL = _env_int("TRAIN_REQUEST_LIMIT_PER_SYMBOL", 120_000)
 TRAIN_TUNE = _env_bool("TRAIN_REQUEST_TUNE", False)
-TRAIN_TUNE_TRIALS = _env_int("TRAIN_REQUEST_TUNE_TRIALS", 8)
+TRAIN_TUNE_TRIALS = _env_int("TRAIN_REQUEST_TUNE_TRIALS", 40)
+TRAIN_OPTIMIZE_METRIC = os.getenv("TRAIN_REQUEST_OPTIMIZE_METRIC", "roc_auc")
+TRAIN_BALANCE_PER_CLASS = _env_int("TRAIN_REQUEST_BALANCE_PER_CLASS", 600_000)
+TRAIN_SENTIMENT_POST_LIMIT = _env_int("TRAIN_REQUEST_SENTIMENT_POST_LIMIT", 150)
 
 
 def _train_payload() -> dict[str, Any]:
@@ -49,6 +52,10 @@ def _train_payload() -> dict[str, Any]:
         "limit_per_symbol": TRAIN_LIMIT_PER_SYMBOL,
         "tune": TRAIN_TUNE,
         "tune_trials": TRAIN_TUNE_TRIALS,
+        "optimize_metric": TRAIN_OPTIMIZE_METRIC,
+        "sentiment_post_limit": TRAIN_SENTIMENT_POST_LIMIT,
+        "balance_classes": True,
+        "balance_per_class": TRAIN_BALANCE_PER_CLASS,
     }
 
 

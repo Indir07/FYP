@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import './page.css'
+import { apiUrl } from '../lib/apiBase'
 
 type RecommendedCoin = { symbol: string }
 
@@ -24,7 +25,7 @@ async function fetchRecommended(): Promise<RecommendedResponse> {
     ],
   }
   try {
-    const res = await fetch('http://localhost:8000/api/coins/recommended?strategy=top10_famous_growing&limit=10')
+    const res = await fetch(apiUrl('/api/coins/recommended?strategy=top10_famous_growing&limit=10'))
     if (!res.ok) return fallback
     const data = (await res.json()) as RecommendedResponse
     return data.coins?.length ? data : fallback
@@ -101,7 +102,7 @@ export function BacktestingPage() {
       if (!symbol) throw new Error('No symbol selected')
       setRunning(true)
       setError(null)
-      const res = await fetch('http://localhost:8000/api/backtest/run', {
+      const res = await fetch(apiUrl('/api/backtest/run'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

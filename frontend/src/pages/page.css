@@ -1,3 +1,49 @@
+.cv-metricsGrid {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.cv-metricsSection {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.cv-metricsSectionTitle {
+  font-size: 13px;
+  font-weight: 650;
+  color: rgba(180, 200, 255, 0.95);
+  margin-bottom: 8px;
+}
+
+.cv-metricRow {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.2fr) minmax(100px, 1fr);
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  align-items: baseline;
+}
+
+.cv-metricRow:last-child {
+  border-bottom: none;
+}
+
+.cv-preJson {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: auto;
+  max-height: 360px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(220, 228, 255, 0.9);
+}
+
 .cv-page {
   display: flex;
   flex-direction: column;

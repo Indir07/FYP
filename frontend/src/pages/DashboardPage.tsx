@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts'
 import './page.css'
+import { apiUrl } from '../lib/apiBase'
 
 type Candle = {
   ts: string
@@ -57,7 +58,7 @@ const DASHBOARD_SYMBOL_KEY = 'cv_dashboard_selected_symbol'
 async function fetchRecommendedCoins(): Promise<string[]> {
   const fallback = TOP10_COINS
   try {
-    const res = await fetch('http://localhost:8000/api/coins/recommended?strategy=top10_famous_growing&limit=10')
+    const res = await fetch(apiUrl('/api/coins/recommended?strategy=top10_famous_growing&limit=10'))
     if (!res.ok) return fallback
     const j = (await res.json()) as RecommendedResponse
     const allowed = new Set(j.coins.map((c) => c.symbol).filter(Boolean))
@@ -70,7 +71,7 @@ async function fetchRecommendedCoins(): Promise<string[]> {
 
 async function fetchKlines(symbol: string): Promise<Candle[]> {
   const res = await fetch(
-    `http://localhost:8000/api/market/klines?symbol=${symbol}&interval=1m&limit=200`,
+    apiUrl(`/api/market/klines?symbol=${encodeURIComponent(symbol)}&interval=1m&limit=200`),
   )
   if (!res.ok) throw new Error('Failed to load klines')
   const json = await res.json()
@@ -85,7 +86,7 @@ async function fetchSentiment(symbol: string): Promise<Sentiment> {
       `${symbol} volatility elevated but sentiment mixed.`,
     ],
   }
-  const res = await fetch('http://localhost:8000/api/sentiment/score', {
+  const res = await fetch(apiUrl('/api/sentiment/score'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -96,7 +97,7 @@ async function fetchSentiment(symbol: string): Promise<Sentiment> {
 }
 
 async function fetchDecision(symbol: string, sentimentIndex: number): Promise<Decision> {
-  const res = await fetch('http://localhost:8000/api/trading/decision', {
+  const res = await fetch(apiUrl('/api/trading/decision'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -130,7 +131,7 @@ export function DashboardPage() {
   const [automationOn, setAutomationOn] = useState(false)
 
   async function getAutomationState(): Promise<boolean> {
-    const res = await fetch('http://localhost:8000/api/trading/automation', { method: 'GET' })
+    const res = await fetch(apiUrl('/api/trading/automation'), { method: 'GET' })
     if (!res.ok) throw new Error('Failed to load automation state')
     const j = await res.json()
     return Boolean(j.automation)
@@ -138,7 +139,7 @@ export function DashboardPage() {
 
   async function startAutomation(sym: string): Promise<void> {
     const qty = sym === 'WAXPUSDT' ? 0.1 : 0.1
-    const res = await fetch('http://localhost:8000/api/trading/automation/start', {
+    const res = await fetch(apiUrl('/api/trading/automation/start'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -165,7 +166,7 @@ export function DashboardPage() {
   }
 
   async function stopAutomation(): Promise<void> {
-    const res = await fetch('http://localhost:8000/api/trading/automation/stop', { method: 'POST' })
+    const res = await fetch(apiUrl('/api/trading/automation/stop'), { method: 'POST' })
     if (!res.ok) throw new Error('Failed to stop automation')
     setAutomationOn(false)
   }
