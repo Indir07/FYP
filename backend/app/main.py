@@ -14,10 +14,11 @@ except ImportError:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy import text
 
 from app.api.router import api_router
-from app.db import Base, engine
+from app.db import Base, DATABASE_URL, engine
 from app import models  # noqa: F401
 
 
@@ -69,7 +70,7 @@ code{background:#f4f4f4;padding:2px 6px;border-radius:4px}</style></head>
 <p>Backend is <strong>running</strong>. This port serves JSON APIs, not the trading dashboard.</p>
 <ul>
 <li><a href="/docs">Swagger UI</a> — try endpoints here</li>
-<li><a href="/health">Health check</a> — <code>{"ok": true}</code></li>
+<li><a href="/health">Health check</a> — includes DB ping (<code>database</code>, <code>connected</code>)</li>
 <li><a href="/openapi.json">OpenAPI JSON</a></li>
 </ul>
 <p><strong>Dashboard UI:</strong> run the frontend (<code>npm run dev</code> in <code>frontend/</code>), then open the URL Vite prints (often <code>http://localhost:5173</code>).</p>
@@ -77,7 +78,25 @@ code{background:#f4f4f4;padding:2px 6px;border-radius:4px}</style></head>
 
     @app.get("/health")
     def health():
-        return {"ok": True}
+        """API liveness + database connectivity (uses DATABASE_URL from `.env`)."""
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception as e:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "ok": False,
+                    "database": "disconnected",
+                    "detail": str(e),
+                },
+            )
+        backend = (
+            "postgresql"
+            if DATABASE_URL.startswith("postgresql")
+            else "sqlite"
+        )
+        return {"ok": True, "database": backend, "connected": True}
 
     return app
 

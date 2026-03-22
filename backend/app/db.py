@@ -6,8 +6,17 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+# Load repo-root `.env` before reading DATABASE_URL (works for uvicorn, scripts, Alembic).
+_repo_root = Path(__file__).resolve().parent.parent.parent
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(_repo_root / ".env")
+except ImportError:
+    pass
+
 # Default: local SQLite next to the backend package (works on Windows/macOS/Linux).
-# Docker/production should set DATABASE_URL (e.g. postgresql+psycopg2://...).
+# Set DATABASE_URL in `.env` for PostgreSQL, e.g. postgresql+psycopg2://user:pass@localhost:5432/cryptovolt
 _default_sqlite = Path(__file__).resolve().parent.parent / "cryptovolt.db"
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_default_sqlite.as_posix()}")
 
