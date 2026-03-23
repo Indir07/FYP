@@ -177,7 +177,7 @@ async def _automation_loop() -> None:
                 continue
             runtime_cfg = _apply_pair_profile(str(sym), _automation_cfg)
 
-            model_entry = get_model_for_symbol(sym)
+            model_entry = get_model_for_symbol(sym, runtime_cfg["interval"])
             if model_entry is None:
                 # No model yet; wait and retry.
                 await asyncio.sleep(10)
@@ -386,7 +386,7 @@ def automation_state():
 @router.post("/decision", response_model=DecisionResponse)
 async def decision(req: DecisionRequest):
     # Pick active model (if any)
-    active = get_model_for_symbol(req.symbol)
+    active = get_model_for_symbol(req.symbol, req.interval)
 
     df = await fetch_klines(KlineQuery(symbol=req.symbol, interval=req.interval, limit=req.limit))
     if active is None:
