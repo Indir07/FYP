@@ -14,6 +14,10 @@ import joblib
 MODEL_DIR = Path(os.getenv("CRYPTOVOLT_MODEL_DIR", "D:/CryptoVolt/backend/_model_registry"))
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
+# Prefer the biggest training run (10 symbols × 120k ≈ 1.2M rows before balancing).
+_DESIRED_N_SAMPLES_DEFAULT = 1_200_000
+DESIRED_N_SAMPLES = int(os.getenv("CRYPTOVOLT_DESIRED_N_SAMPLES", str(_DESIRED_N_SAMPLES_DEFAULT)))
+
 
 @dataclass(frozen=True)
 class ModelEntry:
@@ -73,35 +77,74 @@ def list_entries() -> list[ModelEntry]:
 
 def set_active(model_id: str) -> ModelEntry | None:
     entries = list_entries()
+    if not entries:
+        return None
+
+    desired_entries = [e for e in entries if int(e.metrics.get("n_samples", -1)) == DESIRED_N_SAMPLES]
+    desired_ids = {e.id for e in desired_entries}
+
+    # If caller tries to activate a non-desired model, keep the desired 1.2M model active instead.
+    # (Non-destructive: we only flip the `active` flag, we do not delete files.)
+    chosen_id = model_id
+    if desired_entries and model_id not in desired_ids:
+        chosen_id = desired_entries[0].id
+
     found = None
     for e in entries:
         meta = MODEL_DIR / f"{e.id}.json"
         if not meta.exists():
             continue
         updated = asdict(e)
-        updated["active"] = e.id == model_id
+        updated["active"] = e.id == chosen_id
         with open(meta, "w", encoding="utf-8") as f:
             json.dump(updated, f, indent=2)
-        if e.id == model_id:
+        if e.id == chosen_id:
             found = ModelEntry(**updated)
     return found
 
 
-def get_model_for_symbol(symbol: str) -> ModelEntry | None:
+def get_model_for_symbol(symbol: str, interval: str | None = None) -> ModelEntry | None:
     """
-    Resolve model in this order:
-    1) Most recent symbol-specific model (single-symbol training run).
-    2) Active global model.
-    3) Most recent available model.
+    Resolve model for execution.
+
+    Order:
+    1) Most recent model with `metrics.n_samples == 1_200_000` (optionally matching `interval`)
+       - if a 1.2M model is symbol-specific, prefer it.
+    2) Most recent symbol-specific model (single-symbol training run).
+    3) Active global model.
+    4) Most recent available model.
     """
     entries = list_entries()
     if not entries:
         return None
 
     symbol_upper = symbol.upper()
+
+    # Prefer desired 1.2M training run.
+    desired_entries = [e for e in entries if int(e.metrics.get("n_samples", -1)) == DESIRED_N_SAMPLES]
+    if desired_entries:
+        if interval:
+            desired_interval = [e for e in desired_entries if e.interval == interval]
+            if desired_interval:
+                desired_entries = desired_interval
+        # If any desired entry is explicitly marked active, prefer among those.
+        # This keeps “Activate selected model” consistent with what gets used.
+        active_desired = [e for e in desired_entries if bool(e.active)]
+        candidate_pool = active_desired if active_desired else desired_entries
+
+        desired_symbol_specific = [
+            e
+            for e in candidate_pool
+            if len(e.symbols) == 1 and e.symbols[0].upper() == symbol_upper
+        ]
+        if desired_symbol_specific:
+            return desired_symbol_specific[0]
+
+        return candidate_pool[0]
+
+    # Fallback: previous behavior.
     symbol_specific = [
-        e for e in entries
-        if len(e.symbols) == 1 and e.symbols[0].upper() == symbol_upper
+        e for e in entries if len(e.symbols) == 1 and e.symbols[0].upper() == symbol_upper
     ]
     if symbol_specific:
         return symbol_specific[0]

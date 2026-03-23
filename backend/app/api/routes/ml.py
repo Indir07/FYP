@@ -161,7 +161,12 @@ def job_status(job_id: str):
 
 @router.get("/models", response_model=ModelListResponse)
 def models():
-  return ModelListResponse(models=[m.__dict__ for m in list_entries()])
+  entries = list_entries()
+  # For the demo/operator UX: hide everything except the biggest (1.2M) training run,
+  # so users do not accidentally activate symbol-specific baseline models.
+  desired = [m for m in entries if int(m.metrics.get("n_samples", -1)) == 1_200_000]
+  chosen = desired if desired else entries
+  return ModelListResponse(models=[m.__dict__ for m in chosen])
 
 
 class ActivateRequest(BaseModel):
