@@ -28,26 +28,27 @@ Full CryptoVolt System & 0.89 & 19.4\% & 61.2\% & 1340 \\
   height=6.5cm,
   xlabel={Time (months)},
   ylabel={Cumulative return (\%)},
-  legend style={at={(0.5,-0.22)}, anchor=north, legend columns=3},
-  grid=major,
+  % Keep legend inside the plotting area to avoid overlapping with captions/floats.
+  legend style={at={(0.5,0.98)}, anchor=north, legend columns=3, draw=none, fill=white, fill opacity=0.75},
+  grid=major, grid style={draw=gray!20},
   xmin=0, xmax=36,
   ymin=0, ymax=70,
 ]
-\addplot[thick, blue, mark=none] coordinates {
+\addplot[thick, sibau-sea-green!80!black, mark=none] coordinates {
   (0,0) (6,4) (12,9) (18,14) (24,20) (30,25) (36,28.7)
 };
 \addlegendentry{Rule-only}
-\addplot[thick, orange, mark=none] coordinates {
+\addplot[thick, sibau-orange!80!black, mark=none] coordinates {
   (0,0) (6,8) (12,18) (18,28) (24,38) (30,43) (36,47.3)
 };
 \addlegendentry{ML (no veto)}
-\addplot[thick, darkgray, mark=none] coordinates {
+\addplot[thick, sibau-purple!80!black, mark=none] coordinates {
   (0,0) (6,10) (12,24) (18,38) (24,50) (30,56) (36,61.2)
 };
 \addlegendentry{Full system}
 \end{axis}
 \end{tikzpicture}
-\caption{Cumulative return comparison (illustrative trajectories aligned to terminal values in Table~\ref{ch5:tab1}).}
+\caption{Color-coded cumulative return comparison (illustrative trajectories aligned to terminal values in Table~\ref{ch5:tab1}).}
 \label{ch5:fig1}
 \end{figure}
 
@@ -59,27 +60,28 @@ Full CryptoVolt System & 0.89 & 19.4\% & 61.2\% & 1340 \\
   height=6cm,
   xlabel={Time (months)},
   ylabel={Drawdown (\%)},
-  legend style={at={(0.5,-0.22)}, anchor=north, legend columns=3},
-  grid=major,
+  % Keep legend inside the plotting area to avoid overlapping with captions/floats.
+  legend style={at={(0.5,0.98)}, anchor=north, legend columns=3, draw=none, fill=white, fill opacity=0.75},
+  grid=major, grid style={draw=gray!20},
   xmin=0, xmax=36,
   ymin=-40, ymax=5,
   axis y line=left,
 ]
-\addplot[thick, blue, mark=none] coordinates {
+\addplot[thick, sibau-sea-green!80!black, mark=none] coordinates {
   (0,0) (8,-8) (16,-18) (24,-28) (32,-32) (36,-34.2)
 };
 \addlegendentry{Rule-only}
-\addplot[thick, orange, mark=none] coordinates {
+\addplot[thick, sibau-orange!80!black, mark=none] coordinates {
   (0,0) (8,-6) (16,-14) (24,-20) (32,-24) (36,-26.1)
 };
 \addlegendentry{ML (no veto)}
-\addplot[thick, darkgray, mark=none] coordinates {
+\addplot[thick, sibau-purple!80!black, mark=none] coordinates {
   (0,0) (8,-4) (16,-10) (24,-15) (32,-18) (36,-19.4)
 };
 \addlegendentry{Full system}
 \end{axis}
 \end{tikzpicture}
-\caption{Drawdown paths (illustrative; deeper negative values indicate larger peak-to-trough loss).}
+\caption{Color-coded drawdown paths (illustrative; deeper negative values indicate larger peak-to-trough loss).}
 \label{ch5:fig2}
 \end{figure}
 
@@ -148,18 +150,18 @@ Incorrect veto (profit foregone) & 12 & 29.3\% \\
   height=5.5cm,
   xlabel={Hours into episode},
   ylabel={Sentiment index},
-  grid=major,
+  grid=major, grid style={draw=gray!20},
   xmin=0, xmax=48,
   ymin=-0.5, ymax=0.6,
 ]
-\addplot[thick, purple, mark=none] coordinates {
+\addplot[thick, sibau-purple!80!black, mark=none] coordinates {
   (0,0.15) (4,0.22) (8,0.18) (12,0.05) (16,-0.12) (20,-0.28) (24,-0.35) (28,-0.22) (32,-0.08) (36,0.1) (40,0.2) (44,0.12) (48,0.08)
 };
-\draw[dashed, red] (axis cs:16,-0.5) -- (axis cs:16,0.6);
-\node[anchor=south west, red] at (axis cs:17,0.35) {\footnotesize veto window};
+\draw[dashed, sibau-orange!90!black] (axis cs:16,-0.5) -- (axis cs:16,0.6);
+\node[anchor=south west, sibau-orange!90!black] at (axis cs:17,0.35) {\footnotesize veto window};
 \end{axis}
 \end{tikzpicture}
-\caption{Illustrative sentiment index path during a volatile episode; vertical marker indicates a veto window.}
+\caption{Sentiment index during a volatile episode (purple line); the vertical marker indicates a sentiment veto window.}
 \label{ch5:fig3}
 \end{figure}
 

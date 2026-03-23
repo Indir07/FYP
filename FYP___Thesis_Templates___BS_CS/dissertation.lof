@@ -2,18 +2,18 @@
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {3.1}{\ignorespaces High-level system architecture of CryptoVolt: single API serves the dashboard and optional agent; models and state persist on the server.}}{7}{figure.caption.7}%
-\contentsline {figure}{\numberline {3.2}{\ignorespaces Data flow through the feature engineering pipeline: market and sentiment streams merge before training and hybrid inference.}}{8}{figure.caption.8}%
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Hybrid decision engine: fused model outputs produce a proposal; the sentiment veto can intervene before execution (paper trading).}}{9}{figure.caption.9}%
+\contentsline {figure}{\numberline {3.1}{\ignorespaces High-level system architecture of CryptoVolt: colored components show how the React dashboard and optional agent call the API, which coordinates ML inference and sentiment scoring using persisted server state.}}{7}{figure.caption.7}%
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Color-coded feature engineering pipeline: OHLCV and Reddit text are transformed into technical and sentiment features, then merged into a feature matrix used for training and hybrid inference.}}{8}{figure.caption.8}%
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Hybrid decision engine: color-coded signals from rules, XGBoost, and LSTM are fused into a proposal; a sentiment veto can block or allow execution based on informational risk.}}{9}{figure.caption.9}%
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {4.1}{\ignorespaces Representative CryptoVolt dashboard view: market chart, sentiment summary, and trading decision panel.}}{11}{figure.caption.11}%
 \contentsline {figure}{\numberline {4.2}{\ignorespaces Edge workflow: developer workstations run the agent; commits and scheduled runs push data to the central API.}}{12}{figure.caption.12}%
 \contentsline {figure}{\numberline {4.3}{\ignorespaces Interactive API documentation (Swagger-style) generated from the FastAPI application.}}{13}{figure.caption.13}%
 \contentsline {figure}{\numberline {4.4}{\ignorespaces Simplified request path for an authenticated dashboard call (not to scale).}}{13}{figure.caption.14}%
 \addvspace {10\p@ }
-\contentsline {figure}{\numberline {5.1}{\ignorespaces Cumulative return comparison (illustrative trajectories aligned to terminal values in Table~\ref {ch5:tab1}).}}{15}{figure.caption.16}%
-\contentsline {figure}{\numberline {5.2}{\ignorespaces Drawdown paths (illustrative; deeper negative values indicate larger peak-to-trough loss).}}{16}{figure.caption.17}%
-\contentsline {figure}{\numberline {5.3}{\ignorespaces Illustrative sentiment index path during a volatile episode; vertical marker indicates a veto window.}}{17}{figure.caption.21}%
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Color-coded cumulative return comparison (illustrative trajectories aligned to terminal values in Table~\ref {ch5:tab1}).}}{15}{figure.caption.16}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces Color-coded drawdown paths (illustrative; deeper negative values indicate larger peak-to-trough loss).}}{16}{figure.caption.17}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces Sentiment index during a volatile episode (purple line); the vertical marker indicates a sentiment veto window.}}{16}{figure.caption.21}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \contentsfinish 

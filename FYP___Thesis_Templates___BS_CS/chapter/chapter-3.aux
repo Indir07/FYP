@@ -6,19 +6,19 @@
 \newlabel{ch3}{{3}{7}{Research Methodology}{chapter.3}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.1}Research Design}{7}{section.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3.2}System Architecture}{7}{section.3.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces High-level system architecture of CryptoVolt: single API serves the dashboard and optional agent; models and state persist on the server.}}{7}{figure.caption.7}\protected@file@percent }
-\newlabel{ch3:fig1}{{3.1}{7}{High-level system architecture of CryptoVolt: single API serves the dashboard and optional agent; models and state persist on the server}{figure.caption.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces High-level system architecture of CryptoVolt: colored components show how the React dashboard and optional agent call the API, which coordinates ML inference and sentiment scoring using persisted server state.}}{7}{figure.caption.7}\protected@file@percent }
+\newlabel{ch3:fig1}{{3.1}{7}{High-level system architecture of CryptoVolt: colored components show how the React dashboard and optional agent call the API, which coordinates ML inference and sentiment scoring using persisted server state}{figure.caption.7}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.3}Data Collection Strategy}{8}{section.3.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3.4}Feature Engineering Pipeline}{8}{section.3.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3.2}{\ignorespaces Data flow through the feature engineering pipeline: market and sentiment streams merge before training and hybrid inference.}}{8}{figure.caption.8}\protected@file@percent }
-\newlabel{ch3:fig2}{{3.2}{8}{Data flow through the feature engineering pipeline: market and sentiment streams merge before training and hybrid inference}{figure.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.2}{\ignorespaces Color-coded feature engineering pipeline: OHLCV and Reddit text are transformed into technical and sentiment features, then merged into a feature matrix used for training and hybrid inference.}}{8}{figure.caption.8}\protected@file@percent }
+\newlabel{ch3:fig2}{{3.2}{8}{Color-coded feature engineering pipeline: OHLCV and Reddit text are transformed into technical and sentiment features, then merged into a feature matrix used for training and hybrid inference}{figure.caption.8}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.5}Machine Learning Models}{8}{section.3.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.5.1}XGBoost Classifier}{8}{subsection.3.5.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.5.2}LSTM Forecaster}{8}{subsection.3.5.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3.6}Hybrid Decision Engine}{8}{section.3.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3.7}Evaluation Methodology}{8}{section.3.7}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3.3}{\ignorespaces Hybrid decision engine: fused model outputs produce a proposal; the sentiment veto can intervene before execution (paper trading).}}{9}{figure.caption.9}\protected@file@percent }
-\newlabel{ch3:fig3}{{3.3}{9}{Hybrid decision engine: fused model outputs produce a proposal; the sentiment veto can intervene before execution (paper trading)}{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.3}{\ignorespaces Hybrid decision engine: color-coded signals from rules, XGBoost, and LSTM are fused into a proposal; a sentiment veto can block or allow execution based on informational risk.}}{9}{figure.caption.9}\protected@file@percent }
+\newlabel{ch3:fig3}{{3.3}{9}{Hybrid decision engine: color-coded signals from rules, XGBoost, and LSTM are fused into a proposal; a sentiment veto can block or allow execution based on informational risk}{figure.caption.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.7}Evaluation Methodology}{9}{section.3.7}\protected@file@percent }
 \@setckpt{chapter/chapter-3}{
 \setcounter{page}{10}
 \setcounter{equation}{0}

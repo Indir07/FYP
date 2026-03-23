@@ -10,28 +10,32 @@ CryptoVolt is implemented as a modular system centred on a REST API. The browser
 \centering
 \begin{tikzpicture}[
   font=\small,
-  comp/.style={rectangle, draw, rounded corners, minimum width=2.6cm, minimum height=0.9cm, align=center},
-  store/.style={cylinder, shape border rotate=90, aspect=0.25, draw, minimum height=1.2cm, minimum width=1.4cm},
+  block/.style={rectangle, draw, rounded corners, minimum width=2.9cm, minimum height=0.95cm, align=center, line width=0.7pt, inner sep=2pt, text=white},
+  store/.style={cylinder, shape border rotate=90, aspect=0.25, draw, minimum height=1.2cm, minimum width=1.6cm, fill=sibau-sea-green!18, text=sibau-black},
   arrow/.style={-{Stealth[length=2mm]}, thick}
 ]
-\node[comp] (fe) {React SPA\\(Vite + TS)};
-\node[comp, right=1.8cm of fe] (api) {FastAPI\\REST /api};
-\node[comp, below=1.2cm of api] (ml) {ML layer\\XGBoost / Torch};
-\node[comp, left=1.8cm of ml] (sent) {Sentiment\\VADER + Reddit};
-\node[store, below=0.9cm of ml] (db) {SQL DB};
-\node[comp, left=2.4cm of db] (reg) {Model\\registry};
-\node[comp, right=2.0cm of api] (ex) {Binance-style\\klines API};
-\node[comp, below=0.8cm of fe] (ag) {Optional\\desktop agent};
-\draw[arrow] (fe) -- node[above] {HTTPS} (api);
-\draw[arrow] (ag) -- node[sloped, above] {HTTPS} (api);
-\draw[arrow] (api) -- (ml);
-\draw[arrow] (api) -- (sent);
-\draw[arrow] (ml) -- (db);
-\draw[arrow] (api) -- (db);
-\draw[arrow] (ml) -- (reg);
-\draw[arrow] (sent) -- (ex);
+\node[block, fill=sibau-sea-green!100, draw=sibau-sea-green!80!black] (fe) {React SPA\\(Vite + TS)};
+\node[block, fill=sibau-sky-blue!95, draw=sibau-sky-blue!80!black, right=2.2cm of fe] (api) {FastAPI\\REST /api};
+\node[block, fill=sibau-purple!75, draw=sibau-purple!70!black, below=1.2cm of api] (ml) {ML layer\\XGBoost / Torch};
+\node[block, fill=sibau-orange!85, draw=sibau-orange!70!black, left=2.0cm of ml] (sent) {Sentiment\\VADER + Reddit};
+\node[store, below=1.1cm of ml] (db) {SQL DB};
+\node[block, fill=sibau-yellow!90, draw=sibau-yellow!70!black, text=sibau-black, left=2.6cm of db] (reg) {Model\\registry};
+\node[block, fill=sibau-cyan!35, draw=sibau-cyan!70!black, right=2.2cm of api] (ex) {Binance-style\\klines API};
+% Shift the optional agent to avoid overlapping the sentiment node on the left.
+\node[block, fill=sibau-bright-green!65, draw=sibau-bright-green!80!black, below=2.0cm of fe, xshift=0.4cm] (ag) {Optional\\desktop agent};
+\draw[arrow, draw=sibau-sky-blue!90!black] (fe) -- node[above, font=\scriptsize, text=sibau-sky-blue!90!black] {HTTPS} (api);
+\draw[arrow, draw=sibau-sea-green!90!black] (ag) -- node[sloped, below, midway, font=\scriptsize, text=sibau-sea-green!90!black] {HTTPS} (api);
+
+\draw[arrow, draw=sibau-purple!70!black] (api) -- node[above, font=\scriptsize, text=sibau-purple!70!black] {Features + inference} (ml);
+\draw[arrow, draw=sibau-orange!70!black] (api) -- node[above, font=\scriptsize, text=sibau-orange!70!black] {Sentiment queries} (sent);
+
+\draw[arrow, draw=sibau-sea-green!80!black] (ml) -- node[right, font=\scriptsize, text=sibau-sea-green!80!black] {datasets + metrics} (db);
+\draw[arrow, draw=sibau-sky-blue!80!black] (api) -- node[below, font=\scriptsize, text=sibau-sky-blue!80!black] {users + sessions} (db);
+
+\draw[arrow, draw=sibau-yellow!70!black] (ml) -- node[above, font=\scriptsize, text=sibau-yellow!70!black] {trained models} (reg);
+\draw[arrow, draw=sibau-cyan!90!black] (api) -- node[above, font=\scriptsize, text=sibau-cyan!90!black] {Market data (klines)} (ex);
 \end{tikzpicture}
-\caption{High-level system architecture of CryptoVolt: single API serves the dashboard and optional agent; models and state persist on the server.}
+\caption{High-level system architecture of CryptoVolt: colored components show how the React dashboard and optional agent call the API, which coordinates ML inference and sentiment scoring using persisted server state.}
 \label{ch3:fig1}
 \end{figure}
 
@@ -45,24 +49,24 @@ Technical features draw on the \texttt{ta} library and custom statistics over mu
 \centering
 \begin{tikzpicture}[
   font=\small,
-  box/.style={rectangle, draw, minimum height=0.75cm, minimum width=2.4cm, align=center},
+  box/.style={rectangle, draw, rounded corners, minimum height=0.8cm, minimum width=2.6cm, align=center, line width=0.6pt, inner sep=2pt, text=white},
   arrow/.style={-{Stealth[length=2mm]}, thick}
 ]
-\node[box] (k) {Klines\\OHLCV};
-\node[box, right=1.0cm of k] (f) {Technical\\features};
-\node[box, right=1.0cm of f] (feat) {Feature\\matrix};
-\node[box, below=1.0cm of k] (t) {Text\\(Reddit)};
-\node[box, right=1.0cm of t] (v) {VADER\\scores};
-\node[box, right=1.0cm of v] (s) {Sentiment\\features};
-\node[box, below=1.0cm of feat, xshift=-1.2cm] (m) {Train / infer};
-\draw[arrow] (k) -- (f);
-\draw[arrow] (f) -- (feat);
-\draw[arrow] (t) -- (v);
-\draw[arrow] (v) -- (s);
-\draw[arrow] (feat) -- (m);
-\draw[arrow] (s) -- (m);
+\node[box, fill=sibau-sky-blue!95, draw=sibau-sky-blue!80!black] (k) {Klines\\OHLCV};
+\node[box, fill=sibau-cyan!35, draw=sibau-cyan!70!black, right=1.0cm of k] (f) {Technical\\features};
+\node[box, fill=sibau-purple!75, draw=sibau-purple!70!black, right=1.0cm of f] (feat) {Feature\\matrix};
+\node[box, fill=sibau-orange!85, draw=sibau-orange!70!black, below=1.0cm of k] (t) {Text\\(Reddit)};
+\node[box, fill=sibau-orange!60, draw=sibau-orange!70!black, right=1.0cm of t] (v) {VADER\\scores};
+\node[box, fill=sibau-purple!60, draw=sibau-purple!70!black, right=1.0cm of v] (s) {Sentiment\\features};
+\node[box, fill=sibau-sea-green!100, draw=sibau-sea-green!80!black, below=1.55cm of feat, xshift=-1.0cm] (m) {Train / infer};
+\draw[arrow, draw=sibau-sky-blue!90!black] (k) -- (f);
+\draw[arrow, draw=sibau-cyan!90!black] (f) -- (feat);
+\draw[arrow, draw=sibau-orange!70!black] (t) -- (v);
+\draw[arrow, draw=sibau-purple!70!black] (v) -- (s);
+\draw[arrow, draw=sibau-sea-green!80!black] (feat.south) -- (m.north);
+\draw[arrow, draw=sibau-sea-green!80!black] (s.south) -- (m.north);
 \end{tikzpicture}
-\caption{Data flow through the feature engineering pipeline: market and sentiment streams merge before training and hybrid inference.}
+\caption{Color-coded feature engineering pipeline: OHLCV and Reddit text are transformed into technical and sentiment features, then merged into a feature matrix used for training and hybrid inference.}
 \label{ch3:fig2}
 \end{figure}
 
@@ -80,25 +84,25 @@ Signals from rule logic, gradient boosting, and sequence modelling are fused wit
 \centering
 \begin{tikzpicture}[
   font=\small,
-  inp/.style={rectangle, draw, rounded corners, minimum width=1.8cm, minimum height=0.65cm},
-  sum/.style={circle, draw, minimum size=0.9cm},
-  veto/.style={rectangle, draw, dashed, minimum width=2.8cm, minimum height=1.0cm, align=center},
+  inp/.style={rectangle, draw, rounded corners, minimum width=2.0cm, minimum height=0.7cm, align=center, line width=0.6pt, inner sep=2pt, text=white},
+  sum/.style={circle, draw, minimum size=0.95cm, line width=0.6pt, fill=sibau-sky-blue!20, text=sibau-black},
+  veto/.style={rectangle, draw, dashed, minimum width=2.95cm, minimum height=1.15cm, align=center, line width=0.6pt, fill=sibau-orange!10, text=sibau-black},
   arrow/.style={-{Stealth[length=2mm]}, thick}
 ]
-\node[inp] (r) {Rules};
-\node[inp, below=0.45cm of r] (x) {XGB};
-\node[inp, below=0.45cm of x] (l) {LSTM};
-\node[sum, right=1.4cm of x] (plus) {$+$};
-\node[inp, right=1.6cm of plus] (out) {Proposal};
-\node[veto, below=1.0cm of plus] (v) {Sentiment veto\\(risk check)};
-\draw[arrow] (r) -- (plus);
-\draw[arrow] (x) -- (plus);
-\draw[arrow] (l) -- (plus);
-\draw[arrow] (plus) -- (out);
-\draw[arrow] (plus) -- (v);
-\draw[arrow] (v) -| node[near start, left] {block / allow} (out);
+\node[inp, fill=sibau-sky-blue!95, draw=sibau-sky-blue!80!black] (r) {Rules};
+\node[inp, fill=sibau-purple!75, draw=sibau-purple!70!black, below=0.55cm of r] (x) {XGB};
+\node[inp, fill=sibau-sea-green!100, draw=sibau-sea-green!80!black, below=0.55cm of x] (l) {LSTM};
+\node[sum, right=1.5cm of x, fill=sibau-sky-blue!15] (plus) {$+$};
+\node[inp, fill=sibau-cyan!35, draw=sibau-cyan!70!black, right=1.8cm of plus] (out) {Proposal};
+\node[veto, below=1.2cm of out] (v) {Sentiment veto\\(risk check)};
+\draw[arrow, draw=sibau-sky-blue!80!black] (r) -- (plus);
+\draw[arrow, draw=sibau-purple!70!black] (x) -- (plus);
+\draw[arrow, draw=sibau-sea-green!80!black] (l) -- (plus);
+\draw[arrow, draw=sibau-cyan!90!black] (plus) -- (out);
+\draw[arrow, draw=sibau-orange!70!black] (plus) -- (v);
+\draw[arrow, draw=sibau-orange!70!black] (v) -| node[pos=0.55, left, font=\scriptsize] {block / allow} (out);
 \end{tikzpicture}
-\caption{Hybrid decision engine: fused model outputs produce a proposal; the sentiment veto can intervene before execution (paper trading).}
+\caption{Hybrid decision engine: color-coded signals from rules, XGBoost, and LSTM are fused into a proposal; a sentiment veto can block or allow execution based on informational risk.}
 \label{ch3:fig3}
 \end{figure}
 

@@ -41,7 +41,11 @@ The dashboard page loads recommended symbols, fetches klines for charting, and d
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/dashboard-ui}
+\begin{tikzpicture}
+\node[draw=sibau-sea-green!80!black, line width=1pt, rounded corners=3mm, fill=sibau-sea-green!6, inner sep=2pt] {%
+  \includegraphics[width=0.92\linewidth]{figures/dashboard-ui}%
+};
+\end{tikzpicture}
 \caption{Representative CryptoVolt dashboard view: market chart, sentiment summary, and trading decision panel.}
 \label{ch4:fig-ui}
 \end{figure}
@@ -51,7 +55,11 @@ An optional agent scans configured local directories for Git repositories, runs 
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.75\linewidth]{figures/agent-workflow}
+\begin{tikzpicture}
+\node[draw=sibau-purple!70!black, line width=1pt, rounded corners=3mm, fill=sibau-purple!6, inner sep=2pt] {%
+  \includegraphics[width=0.75\linewidth]{figures/agent-workflow}%
+};
+\end{tikzpicture}
 \caption{Edge workflow: developer workstations run the agent; commits and scheduled runs push data to the central API.}
 \label{ch4:fig-agent}
 \end{figure}
@@ -64,7 +72,11 @@ FastAPI automatically exposes an OpenAPI schema and interactive documentation (t
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/openapi-docs-ui}
+\begin{tikzpicture}
+\node[draw=sibau-sky-blue!70!black, line width=1pt, rounded corners=3mm, fill=sibau-sky-blue!6, inner sep=2pt] {%
+  \includegraphics[width=0.92\linewidth]{figures/openapi-docs-ui}%
+};
+\end{tikzpicture}
 \caption{Interactive API documentation (Swagger-style) generated from the FastAPI application.}
 \label{ch4:fig-openapi}
 \end{figure}
@@ -76,17 +88,17 @@ Figure~\ref{ch4:fig1} depicts how browser, API, and persistence layers interact 
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,
-  actor/.style={rectangle, draw, rounded corners, minimum width=1.6cm, minimum height=0.55cm},
+  actor/.style={rectangle, draw, rounded corners, minimum width=1.6cm, minimum height=0.55cm, line width=0.6pt, align=center},
   lifeline/.style={rectangle, draw, minimum width=0.15cm, minimum height=3.2cm},
-  msg/.style={-{Stealth[length=1.8mm]}, thick}
+  msg/.style={-{Stealth[length=1.8mm]}, thick, draw=sibau-dark-blue}
 ]
-\node[actor] (u) {User};
-\node[actor, right=2.0cm of u] (sp) {SPA};
-\node[actor, right=2.0cm of sp] (api) {API};
-\node[actor, right=2.0cm of api] (db) {DB};
-\draw[msg] ($(u.east)+(0,-0.35)$) -- node[above]{open UI} ($(sp.west)+(0,-0.35)$);
-\draw[msg] ($(sp.east)+(0,-0.65)$) -- node[above]{GET /api/... + JWT} ($(api.west)+(0,-0.65)$);
-\draw[msg] ($(api.east)+(0,-0.95)$) -- node[above]{SQL} ($(db.west)+(0,-0.95)$);
+\node[actor, fill=sibau-sea-green!20, draw=sibau-sea-green!90!black] (u) {User};
+\node[actor, fill=sibau-cyan!20, draw=sibau-cyan!70!black, right=2.0cm of u] (sp) {SPA};
+\node[actor, fill=sibau-sky-blue!20, draw=sibau-sky-blue!70!black, right=2.0cm of sp] (api) {API};
+\node[actor, fill=sibau-purple!12, draw=sibau-purple!70!black, right=2.0cm of api] (db) {DB};
+\draw[msg] ($(u.east)+(0,-0.35)$) -- node[above, font=\scriptsize, text=sibau-dark-blue]{open UI} ($(sp.west)+(0,-0.35)$);
+\draw[msg] ($(sp.east)+(0,-0.65)$) -- node[above, font=\scriptsize, text=sibau-dark-blue]{GET /api/... + JWT} ($(api.west)+(0,-0.65)$);
+\draw[msg] ($(api.east)+(0,-0.95)$) -- node[above, font=\scriptsize, text=sibau-dark-blue]{SQL} ($(db.west)+(0,-0.95)$);
 \draw[msg, dashed] ($(db.west)+(0,-1.35)$) -- ($(api.east)+(0,-1.35)$);
 \draw[msg, dashed] ($(api.west)+(0,-1.65)$) -- ($(sp.east)+(0,-1.65)$);
 \end{tikzpicture}
