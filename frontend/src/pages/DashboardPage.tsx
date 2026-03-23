@@ -55,6 +55,166 @@ const TOP10_COINS = [
 ]
 const DASHBOARD_SYMBOL_KEY = 'cv_dashboard_selected_symbol'
 
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (!entry) return
+      const cr = entry.contentRect
+      setSize({ width: cr.width, height: cr.height })
+    })
+
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  return { ref, size }
+}
+
+function toTimeLabel(ts: string) {
+  const d = new Date(ts)
+  if (Number.isNaN(d.getTime())) return ts
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function CandlestickSVG({ candles, width, height }: { candles: Candle[]; width: number; height: number }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+
+  const margin = { left: 56, right: 10, top: 10, bottom: 22 }
+  const innerW = Math.max(1, width - margin.left - margin.right)
+  const innerH = Math.max(1, height - margin.top - margin.bottom)
+
+  const lows = candles.map((c) => c.low)
+  const highs = candles.map((c) => c.high)
+
+  const minY = lows.length ? Math.min(...lows) : 0
+  const maxY = highs.length ? Math.max(...highs) : 1
+  const pad = (maxY - minY) * 0.05
+  const yMin = minY - pad
+  const yMax = maxY + pad
+  const yRange = Math.max(1e-9, yMax - yMin)
+
+  const xStep = candles.length ? innerW / candles.length : innerW
+  const candleW = Math.max(3, Math.min(10, xStep * 0.65))
+
+  const yScale = (v: number) => margin.top + innerH - ((v - yMin) / yRange) * innerH
+  const xCenter = (i: number) => margin.left + i * xStep + xStep / 2
+
+  const onMove = (e: any) => {
+    if (!svgRef.current) return
+    const rect = svgRef.current.getBoundingClientRect()
+    const px = e.clientX - rect.left
+    const i = Math.floor((px - margin.left) / xStep)
+    const clamped = Math.max(0, Math.min(candles.length - 1, i))
+    setHoverIdx(Number.isFinite(clamped) ? clamped : null)
+  }
+
+  const tooltip =
+    hoverIdx != null && candles[hoverIdx] ? (
+      (() => {
+        const c = candles[hoverIdx]
+        const x = xCenter(hoverIdx)
+        const y = yScale(Math.max(c.high, c.close))
+        const isUp = c.close >= c.open
+        const color = isUp ? 'rgba(34,197,94,0.95)' : 'rgba(239,68,68,0.95)'
+        return (
+          <div
+            className="cv-binanceTooltip"
+            style={{
+              left: x,
+              top: y,
+              transform: 'translate(-50%, -100%)',
+              borderColor: color,
+            }}
+          >
+            <div style={{ fontWeight: 750, fontSize: 12, color: 'rgba(240,245,255,0.95)' }}>
+              {toTimeLabel(c.ts)}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(232,236,255,0.78)', marginTop: 4 }}>
+              O: {c.open.toFixed(4)}
+              <br />
+              H: {c.high.toFixed(4)}
+              <br />
+              L: {c.low.toFixed(4)}
+              <br />
+              C: {c.close.toFixed(4)}
+            </div>
+          </div>
+        )
+      })()
+    ) : null
+
+  const ticks = 5
+  const yTickVals = Array.from({ length: ticks }, (_, i) => yMin + (yRange * i) / (ticks - 1))
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {tooltip}
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        onMouseMove={onMove}
+        onMouseLeave={() => setHoverIdx(null)}
+        style={{ display: 'block' }}
+      >
+        {yTickVals.map((v, i) => {
+          const y = yScale(v)
+          return (
+            <g key={i}>
+              <line
+                x1={margin.left}
+                x2={width - margin.right}
+                y1={y}
+                y2={y}
+                stroke="rgba(255,255,255,0.08)"
+              />
+              <text x={margin.left - 8} y={y + 4} textAnchor="end" fontSize={11} fill="rgba(232,236,255,0.55)">
+                {v.toFixed(2)}
+              </text>
+            </g>
+          )
+        })}
+
+        {candles.map((c, i) => {
+          const cx = xCenter(i)
+          const yO = yScale(c.open)
+          const yC = yScale(c.close)
+          const yH = yScale(c.high)
+          const yL = yScale(c.low)
+          const isUp = c.close >= c.open
+          const col = isUp ? '#22c55e' : '#ef4444'
+          const bodyTop = Math.min(yO, yC)
+          const bodyH = Math.max(1, Math.abs(yC - yO))
+
+          return (
+            <g key={c.ts}>
+              <line x1={cx} x2={cx} y1={yH} y2={yL} stroke={col} strokeWidth={1} />
+              <rect
+                x={cx - candleW / 2}
+                y={bodyTop}
+                width={candleW}
+                height={bodyH}
+                fill={col}
+                stroke={col}
+                strokeWidth={0.5}
+                rx={1}
+              />
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
 async function fetchRecommendedCoins(): Promise<string[]> {
   const fallback = TOP10_COINS
   try {
@@ -129,6 +289,8 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [automationOn, setAutomationOn] = useState(false)
+
+  const { ref: priceChartWrapRef, size: priceChartSize } = useElementSize<HTMLDivElement>()
 
   async function getAutomationState(): Promise<boolean> {
     const res = await fetch(apiUrl('/api/trading/automation'), { method: 'GET' })
@@ -402,37 +564,14 @@ export function DashboardPage() {
       <div className="cv-split">
         <div className="cv-card cv-cardTall">
           <div className="cv-cardTitle">Price (live)</div>
-          <div style={{ height: 320, marginTop: 12 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={candles} margin={{ left: 6, right: 10, top: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gPrice" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#49a3ff" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#49a3ff" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.08)" vertical={false} />
-                <XAxis
-                  dataKey="ts"
-                  tick={{ fill: 'rgba(232,236,255,0.6)', fontSize: 12 }}
-                  minTickGap={24}
-                />
-                <YAxis
-                  tick={{ fill: 'rgba(232,236,255,0.6)', fontSize: 12 }}
-                  width={56}
-                  domain={['auto', 'auto']}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: 'rgba(11,16,32,0.92)',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: 12,
-                    color: '#e8ecff',
-                  }}
-                />
-                <Area type="monotone" dataKey="close" stroke="#49a3ff" fill="url(#gPrice)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div ref={priceChartWrapRef} style={{ height: 320, marginTop: 12, position: 'relative' }}>
+            {priceChartSize.width > 0 && candles.length ? (
+              <CandlestickSVG
+                candles={candles}
+                width={priceChartSize.width}
+                height={priceChartSize.height || 320}
+              />
+            ) : null}
           </div>
         </div>
 
