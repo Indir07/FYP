@@ -56,7 +56,7 @@ class BacktestRunResponse(BaseModel):
 
 @router.post("/run", response_model=BacktestRunResponse)
 async def run_backtest(req: BacktestRequest):
-    model_entry = get_model_for_symbol(req.symbol)
+    model_entry = get_model_for_symbol(req.symbol, req.interval)
     if model_entry is None:
         return BacktestRunResponse(
             symbol=req.symbol,
