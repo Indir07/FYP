@@ -18,7 +18,6 @@ ML & XGBoost, PyTorch, scikit-learn, pandas, NumPy & Training jobs, inference, m
 NLP & VADER, PRAW (Reddit) & Sentiment scoring and optional social ingestion \\
 Charts / TA & \texttt{ta}, Recharts (frontend) & Indicators and dashboard candles \\
 Client UI & React 18, TypeScript, Vite & Dashboard, auth flow, API proxy in dev \\
-Edge (optional) & Go agent binary & Local Git scan, queue, upload to API \\
 \bottomrule
 \end{tabular}%
 }
@@ -50,20 +49,6 @@ The dashboard page loads recommended symbols, fetches klines for charting, and d
 \label{ch4:fig-ui}
 \end{figure}
 
-\section{Desktop Agent and Scheduling}
-An optional agent scans configured local directories for Git repositories, runs analysis, deduplicates events by commit hash where applicable, and uploads batches to the API. Install scripts can register OS schedulers (e.g.\ Windows Task Scheduler, launchd, cron) and optional Git \texttt{post-commit} hooks; logs are written alongside the installation directory. Figure~\ref{ch4:fig-agent} illustrates the edge-to-cloud workflow.
-
-\begin{figure}[ht]
-\centering
-\begin{tikzpicture}
-\node[draw=sibau-purple!70!black, line width=1pt, rounded corners=3mm, fill=sibau-purple!6, inner sep=2pt] {%
-  \includegraphics[width=0.75\linewidth]{figures/agent-workflow}%
-};
-\end{tikzpicture}
-\caption{Edge workflow: developer workstations run the agent; commits and scheduled runs push data to the central API.}
-\label{ch4:fig-agent}
-\end{figure}
-
 \section{Alerting}
 Discord webhooks and in-app alert records (where implemented) notify operators of notable events or test messages. Configuration is via environment variables to avoid hard-coding secrets.
 
@@ -86,22 +71,7 @@ Figure~\ref{ch4:fig1} depicts how browser, API, and persistence layers interact 
 
 \begin{figure}[ht]
 \centering
-\begin{tikzpicture}[
-  font=\footnotesize,
-  actor/.style={rectangle, draw, rounded corners, minimum width=1.6cm, minimum height=0.55cm, line width=0.6pt, align=center},
-  lifeline/.style={rectangle, draw, minimum width=0.15cm, minimum height=3.2cm},
-  msg/.style={-{Stealth[length=1.8mm]}, thick, draw=sibau-dark-blue}
-]
-\node[actor, fill=sibau-sea-green!20, draw=sibau-sea-green!90!black] (u) {User};
-\node[actor, fill=sibau-cyan!20, draw=sibau-cyan!70!black, right=2.0cm of u] (sp) {SPA};
-\node[actor, fill=sibau-sky-blue!20, draw=sibau-sky-blue!70!black, right=2.0cm of sp] (api) {API};
-\node[actor, fill=sibau-purple!12, draw=sibau-purple!70!black, right=2.0cm of api] (db) {DB};
-\draw[msg] ($(u.east)+(0,-0.35)$) -- node[above, font=\scriptsize, text=sibau-dark-blue]{open UI} ($(sp.west)+(0,-0.35)$);
-\draw[msg] ($(sp.east)+(0,-0.65)$) -- node[above, font=\scriptsize, text=sibau-dark-blue]{GET /api/... + JWT} ($(api.west)+(0,-0.65)$);
-\draw[msg] ($(api.east)+(0,-0.95)$) -- node[above, font=\scriptsize, text=sibau-dark-blue]{SQL} ($(db.west)+(0,-0.95)$);
-\draw[msg, dashed] ($(db.west)+(0,-1.35)$) -- ($(api.east)+(0,-1.35)$);
-\draw[msg, dashed] ($(api.west)+(0,-1.65)$) -- ($(sp.east)+(0,-1.65)$);
-\end{tikzpicture}
+\includegraphics[width=0.96\linewidth]{figures/figure-4-4-custom}
 \caption{Simplified request path for an authenticated dashboard call (not to scale).}
 \label{ch4:fig1}
 \end{figure}

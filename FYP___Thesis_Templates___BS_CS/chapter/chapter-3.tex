@@ -4,38 +4,12 @@
 This project follows a design science methodology where a functional artifact is built and evaluated to answer the research question. The workflow includes requirements analysis, architecture design, implementation, and multi-stage evaluation.
 
 \section{System Architecture}
-CryptoVolt is implemented as a modular system centred on a REST API. The browser dashboard and optional desktop agent are clients of the same API; persistence and model artefacts live on the server. Figure~\ref{ch3:fig1} summarises the major components and data flows at a level suitable for supervision and replication.
+CryptoVolt is implemented as a modular system centred on a REST API. The browser dashboard is a client of the same API; persistence and model artefacts live on the server. Figure~\ref{ch3:fig1} summarises the major components and data flows at a level suitable for supervision and replication.
 
 \begin{figure}[ht]
 \centering
-\begin{tikzpicture}[
-  font=\small,
-  block/.style={rectangle, draw, rounded corners, minimum width=2.9cm, minimum height=0.95cm, align=center, line width=0.7pt, inner sep=2pt, text=white},
-  store/.style={cylinder, shape border rotate=90, aspect=0.25, draw, minimum height=1.2cm, minimum width=1.6cm, fill=sibau-sea-green!18, text=sibau-black},
-  arrow/.style={-{Stealth[length=2mm]}, thick}
-]
-\node[block, fill=sibau-sea-green!100, draw=sibau-sea-green!80!black] (fe) {React SPA\\(Vite + TS)};
-\node[block, fill=sibau-sky-blue!95, draw=sibau-sky-blue!80!black, right=2.2cm of fe] (api) {FastAPI\\REST /api};
-\node[block, fill=sibau-purple!75, draw=sibau-purple!70!black, below=1.2cm of api] (ml) {ML layer\\XGBoost / Torch};
-\node[block, fill=sibau-orange!85, draw=sibau-orange!70!black, left=2.0cm of ml] (sent) {Sentiment\\VADER + Reddit};
-\node[store, below=1.1cm of ml] (db) {SQL DB};
-\node[block, fill=sibau-yellow!90, draw=sibau-yellow!70!black, text=sibau-black, left=2.6cm of db] (reg) {Model\\registry};
-\node[block, fill=sibau-cyan!35, draw=sibau-cyan!70!black, right=2.2cm of api] (ex) {Binance-style\\klines API};
-% Shift the optional agent to avoid overlapping the sentiment node on the left.
-\node[block, fill=sibau-bright-green!65, draw=sibau-bright-green!80!black, below=2.0cm of fe, xshift=0.4cm] (ag) {Optional\\desktop agent};
-\draw[arrow, draw=sibau-sky-blue!90!black] (fe) -- node[above, font=\scriptsize, text=sibau-sky-blue!90!black] {HTTPS} (api);
-\draw[arrow, draw=sibau-sea-green!90!black] (ag) -- node[sloped, below, midway, font=\scriptsize, text=sibau-sea-green!90!black] {HTTPS} (api);
-
-\draw[arrow, draw=sibau-purple!70!black] (api) -- node[above, font=\scriptsize, text=sibau-purple!70!black] {Features + inference} (ml);
-\draw[arrow, draw=sibau-orange!70!black] (api) -- node[above, font=\scriptsize, text=sibau-orange!70!black] {Sentiment queries} (sent);
-
-\draw[arrow, draw=sibau-sea-green!80!black] (ml) -- node[right, font=\scriptsize, text=sibau-sea-green!80!black] {datasets + metrics} (db);
-\draw[arrow, draw=sibau-sky-blue!80!black] (api) -- node[below, font=\scriptsize, text=sibau-sky-blue!80!black] {users + sessions} (db);
-
-\draw[arrow, draw=sibau-yellow!70!black] (ml) -- node[above, font=\scriptsize, text=sibau-yellow!70!black] {trained models} (reg);
-\draw[arrow, draw=sibau-cyan!90!black] (api) -- node[above, font=\scriptsize, text=sibau-cyan!90!black] {Market data (klines)} (ex);
-\end{tikzpicture}
-\caption{High-level system architecture of CryptoVolt: colored components show how the React dashboard and optional agent call the API, which coordinates ML inference and sentiment scoring using persisted server state.}
+\includegraphics[width=0.96\linewidth]{figures/figure-3-1-custom}
+\caption{High-level system architecture of CryptoVolt showing API-centric orchestration across market data, sentiment, model inference, and persistence.}
 \label{ch3:fig1}
 \end{figure}
 
@@ -47,26 +21,8 @@ Technical features draw on the \texttt{ta} library and custom statistics over mu
 
 \begin{figure}[ht]
 \centering
-\begin{tikzpicture}[
-  font=\small,
-  box/.style={rectangle, draw, rounded corners, minimum height=0.8cm, minimum width=2.6cm, align=center, line width=0.6pt, inner sep=2pt, text=white},
-  arrow/.style={-{Stealth[length=2mm]}, thick}
-]
-\node[box, fill=sibau-sky-blue!95, draw=sibau-sky-blue!80!black] (k) {Klines\\OHLCV};
-\node[box, fill=sibau-cyan!35, draw=sibau-cyan!70!black, right=1.0cm of k] (f) {Technical\\features};
-\node[box, fill=sibau-purple!75, draw=sibau-purple!70!black, right=1.0cm of f] (feat) {Feature\\matrix};
-\node[box, fill=sibau-orange!85, draw=sibau-orange!70!black, below=1.0cm of k] (t) {Text\\(Reddit)};
-\node[box, fill=sibau-orange!60, draw=sibau-orange!70!black, right=1.0cm of t] (v) {VADER\\scores};
-\node[box, fill=sibau-purple!60, draw=sibau-purple!70!black, right=1.0cm of v] (s) {Sentiment\\features};
-\node[box, fill=sibau-sea-green!100, draw=sibau-sea-green!80!black, below=1.55cm of feat, xshift=-1.0cm] (m) {Train / infer};
-\draw[arrow, draw=sibau-sky-blue!90!black] (k) -- (f);
-\draw[arrow, draw=sibau-cyan!90!black] (f) -- (feat);
-\draw[arrow, draw=sibau-orange!70!black] (t) -- (v);
-\draw[arrow, draw=sibau-purple!70!black] (v) -- (s);
-\draw[arrow, draw=sibau-sea-green!80!black] (feat.south) -- (m.north);
-\draw[arrow, draw=sibau-sea-green!80!black] (s.south) -- (m.north);
-\end{tikzpicture}
-\caption{Color-coded feature engineering pipeline: OHLCV and Reddit text are transformed into technical and sentiment features, then merged into a feature matrix used for training and hybrid inference.}
+\includegraphics[width=0.96\linewidth]{figures/figure-3-2-custom}
+\caption{Feature engineering pipeline: OHLCV and Reddit text are transformed into technical and sentiment features, merged into a feature matrix, and consumed by the train/infer stage.}
 \label{ch3:fig2}
 \end{figure}
 
@@ -82,27 +38,8 @@ Signals from rule logic, gradient boosting, and sequence modelling are fused wit
 
 \begin{figure}[ht]
 \centering
-\begin{tikzpicture}[
-  font=\small,
-  inp/.style={rectangle, draw, rounded corners, minimum width=2.0cm, minimum height=0.7cm, align=center, line width=0.6pt, inner sep=2pt, text=white},
-  sum/.style={circle, draw, minimum size=0.95cm, line width=0.6pt, fill=sibau-sky-blue!20, text=sibau-black},
-  veto/.style={rectangle, draw, dashed, minimum width=2.95cm, minimum height=1.15cm, align=center, line width=0.6pt, fill=sibau-orange!10, text=sibau-black},
-  arrow/.style={-{Stealth[length=2mm]}, thick}
-]
-\node[inp, fill=sibau-sky-blue!95, draw=sibau-sky-blue!80!black] (r) {Rules};
-\node[inp, fill=sibau-purple!75, draw=sibau-purple!70!black, below=0.55cm of r] (x) {XGB};
-\node[inp, fill=sibau-sea-green!100, draw=sibau-sea-green!80!black, below=0.55cm of x] (l) {LSTM};
-\node[sum, right=1.5cm of x, fill=sibau-sky-blue!15] (plus) {$+$};
-\node[inp, fill=sibau-cyan!35, draw=sibau-cyan!70!black, right=1.8cm of plus] (out) {Proposal};
-\node[veto, below=1.2cm of out] (v) {Sentiment veto\\(risk check)};
-\draw[arrow, draw=sibau-sky-blue!80!black] (r) -- (plus);
-\draw[arrow, draw=sibau-purple!70!black] (x) -- (plus);
-\draw[arrow, draw=sibau-sea-green!80!black] (l) -- (plus);
-\draw[arrow, draw=sibau-cyan!90!black] (plus) -- (out);
-\draw[arrow, draw=sibau-orange!70!black] (plus) -- (v);
-\draw[arrow, draw=sibau-orange!70!black] (v) -| node[pos=0.55, left, font=\scriptsize] {block / allow} (out);
-\end{tikzpicture}
-\caption{Hybrid decision engine: color-coded signals from rules, XGBoost, and LSTM are fused into a proposal; a sentiment veto can block or allow execution based on informational risk.}
+\includegraphics[width=0.96\linewidth]{figures/figure-3-3-custom}
+\caption{Hybrid decision engine: rules, XGBoost, and LSTM are fused into a proposal, while the sentiment veto path can block or allow execution.}
 \label{ch3:fig3}
 \end{figure}
 

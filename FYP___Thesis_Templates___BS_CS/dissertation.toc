@@ -23,10 +23,10 @@
 \contentsline {chapter}{\numberline {3}Research Methodology}{7}{chapter.3}%
 \contentsline {section}{\numberline {3.1}Research Design}{7}{section.3.1}%
 \contentsline {section}{\numberline {3.2}System Architecture}{7}{section.3.2}%
-\contentsline {section}{\numberline {3.3}Data Collection Strategy}{8}{section.3.3}%
-\contentsline {section}{\numberline {3.4}Feature Engineering Pipeline}{8}{section.3.4}%
-\contentsline {section}{\numberline {3.5}Machine Learning Models}{8}{section.3.5}%
-\contentsline {subsection}{\numberline {3.5.1}XGBoost Classifier}{8}{subsection.3.5.1}%
+\contentsline {section}{\numberline {3.3}Data Collection Strategy}{7}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Feature Engineering Pipeline}{7}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Machine Learning Models}{7}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}XGBoost Classifier}{7}{subsection.3.5.1}%
 \contentsline {subsection}{\numberline {3.5.2}LSTM Forecaster}{8}{subsection.3.5.2}%
 \contentsline {section}{\numberline {3.6}Hybrid Decision Engine}{8}{section.3.6}%
 \contentsline {section}{\numberline {3.7}Evaluation Methodology}{9}{section.3.7}%
@@ -37,29 +37,27 @@
 \contentsline {section}{\numberline {4.4}Machine Learning Training Pipeline}{11}{section.4.4}%
 \contentsline {section}{\numberline {4.5}Hybrid Trading and Paper Trading}{11}{section.4.5}%
 \contentsline {section}{\numberline {4.6}Frontend Dashboard}{11}{section.4.6}%
-\contentsline {section}{\numberline {4.7}Desktop Agent and Scheduling}{12}{section.4.7}%
-\contentsline {section}{\numberline {4.8}Alerting}{12}{section.4.8}%
-\contentsline {section}{\numberline {4.9}API Documentation and Developer Experience}{12}{section.4.9}%
-\contentsline {section}{\numberline {4.10}Module Interaction}{12}{section.4.10}%
-\contentsline {chapter}{\numberline {5}Results and Discussion}{14}{chapter.5}%
-\contentsline {section}{\numberline {5.1}Backtesting Performance}{14}{section.5.1}%
-\contentsline {section}{\numberline {5.2}Model Prediction Metrics}{14}{section.5.2}%
-\contentsline {section}{\numberline {5.3}Live Paper Trading Evaluation}{15}{section.5.3}%
-\contentsline {section}{\numberline {5.4}Sentiment Risk Veto Analysis}{15}{section.5.4}%
-\contentsline {section}{\numberline {5.5}Discussion}{15}{section.5.5}%
-\contentsline {section}{\numberline {5.6}Qualitative Observations}{17}{section.5.6}%
-\contentsline {section}{\numberline {5.7}Threats to Validity}{17}{section.5.7}%
-\contentsline {chapter}{\numberline {6}Conclusion and Future Work}{18}{chapter.6}%
-\contentsline {section}{\numberline {6.1}Summary of Contributions}{18}{section.6.1}%
-\contentsline {section}{\numberline {6.2}Lessons from Development}{18}{section.6.2}%
-\contentsline {section}{\numberline {6.3}Future Work}{18}{section.6.3}%
-\contentsline {section}{\numberline {6.4}Deployment and Maintenance Checklist}{19}{section.6.4}%
-\contentsline {section}{\numberline {6.5}Closing Remarks}{19}{section.6.5}%
-\contentsline {chapter}{\numberline {A}API and Configuration Reference}{20}{appendix.A}%
-\contentsline {section}{\numberline {A.1}REST API Prefixes}{20}{section.A.1}%
-\contentsline {section}{\numberline {A.2}Selected Environment Variables}{21}{section.A.2}%
-\contentsline {section}{\numberline {A.3}Desktop Agent (Optional)}{21}{section.A.3}%
-\contentsline {section}{\numberline {A.4}Glossary of Project Terms}{21}{section.A.4}%
-\contentsline {section}{\numberline {A.5}Local replication workflow}{21}{section.A.5}%
-\contentsline {chapter}{Bibliography}{23}{appendix*.24}%
+\contentsline {section}{\numberline {4.7}Alerting}{12}{section.4.7}%
+\contentsline {section}{\numberline {4.8}API Documentation and Developer Experience}{12}{section.4.8}%
+\contentsline {section}{\numberline {4.9}Module Interaction}{12}{section.4.9}%
+\contentsline {chapter}{\numberline {5}Results and Discussion}{13}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Backtesting Performance}{13}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Model Prediction Metrics}{13}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Live Paper Trading Evaluation}{14}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Sentiment Risk Veto Analysis}{14}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Discussion}{14}{section.5.5}%
+\contentsline {section}{\numberline {5.6}Qualitative Observations}{16}{section.5.6}%
+\contentsline {section}{\numberline {5.7}Threats to Validity}{16}{section.5.7}%
+\contentsline {chapter}{\numberline {6}Conclusion and Future Work}{17}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Summary of Contributions}{17}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Lessons from Development}{17}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Future Work}{17}{section.6.3}%
+\contentsline {section}{\numberline {6.4}Deployment and Maintenance Checklist}{18}{section.6.4}%
+\contentsline {section}{\numberline {6.5}Closing Remarks}{18}{section.6.5}%
+\contentsline {chapter}{\numberline {A}API and Configuration Reference}{19}{appendix.A}%
+\contentsline {section}{\numberline {A.1}REST API Prefixes}{19}{section.A.1}%
+\contentsline {section}{\numberline {A.2}Selected Environment Variables}{20}{section.A.2}%
+\contentsline {section}{\numberline {A.3}Glossary of Project Terms}{20}{section.A.3}%
+\contentsline {section}{\numberline {A.4}Local replication workflow}{20}{section.A.4}%
+\contentsline {chapter}{Bibliography}{22}{appendix*.23}%
 \contentsfinish 
